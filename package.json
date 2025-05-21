@@ -6,13 +6,21 @@
   "type": "module",
   "scripts": {
     "start": "NODE_ENV=production node src/server.js",
-    "dev": "NODE_ENV=development node --watch src/server.js"
+    "dev": "NODE_ENV=development node --watch src/server.js",
+    "seed": "node src/config/seed.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.8.2",
     "dotenv": "^16.5.0",
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "prisma": "^6.8.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }
