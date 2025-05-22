@@ -8,5 +8,7 @@ const router = Router();
 
 router.post("/register", registerUserValidator, asyncErrorHandler(authController.registerUser));
 router.post("/login", loginUserValidator, asyncErrorHandler(authController.loginUser));
+router.post("/logout", loginUserValidator, asyncErrorHandler(authController.logoutUser));
+router.post("/refresh", loginUserValidator, asyncErrorHandler(authController.refreshAccessToken));
 
 export default router;

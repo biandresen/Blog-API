@@ -57,6 +57,11 @@ app.use(compression());
 
 // ROUTES
 app.use("/api/v1/auth", routes.authRouter);
+app.use("/", isAuthenticated, (req, res) => {
+  res.json({
+    message: "Hello",
+  });
+});
 
 // UNHANDLED ROUTES
 app.all("/*b", (req, res, next) => {

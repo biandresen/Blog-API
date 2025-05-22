@@ -80,7 +80,69 @@ async function loginUser(req, res, next) {
   });
 }
 
+async function logoutUser(req, res, next) {
+  const token = req.cookies?.refreshToken;
+  if (token) {
+    const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    console.log(decodedUser);
+    await authService.deleteRefreshToken(decodedUser.id, token);
+  }
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+  });
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Logged out successfully",
+  });
+}
+
+async function refreshAccessToken(req, res, next) {
+  const token = req.cookies?.refreshToken;
+  if (!token) return next(new CustomError(400, "No refresh token. Please login"));
+
+  const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  if (!decodedUser) return next(new CustomError(400, "Invalid refresh token. Please login"));
+
+  const isValid = await authService.getRefreshToken(decodedUser.id, token);
+  if (!isValid) return next(new CustomError(400, "Invalid refresh token. Please login"));
+
+  const tokenPayload = { id: decodedUser.id, username: decodedUser.username, email: decodedUser.email };
+  const accessToken = jwt.sign(tokenPayload, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
+  const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+
+  const tokenData = {
+    token: refreshToken,
+    issuedAt: new Date(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    userAgent: req.get("User-Agent") || null,
+    ipAddress: req.ip || null,
+  };
+
+  await authService.storeRefreshToken(decodedUser.id, tokenData);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "New access token provided",
+    accessToken,
+  });
+}
+
 export default {
   registerUser,
   loginUser,
+  logoutUser,
+  refreshAccessToken,
 };

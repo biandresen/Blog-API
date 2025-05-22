@@ -39,6 +39,20 @@ async function storeRefreshToken(userId, { token, issuedAt, expiresAt, userAgent
   // Prevents duplicates per device.
 }
 
+async function deleteRefreshToken(userId, token) {
+  await prisma.refreshToken.deleteMany({
+    where: { userId, token },
+  });
+}
+
+async function getRefreshToken(userId, token) {
+  return await prisma.refreshToken.findFirst({
+    where: { userId, token },
+  });
+}
+
 export default {
   storeRefreshToken,
+  deleteRefreshToken,
+  getRefreshToken,
 };
