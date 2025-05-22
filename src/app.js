@@ -1,16 +1,64 @@
+// PACKAGE IMPORTS
 import express from "express";
+import compression from "compression";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import hpp from "hpp";
+import morgan from "morgan";
+
+// INTERNAL IMPORTS
+import CustomError from "./utils/CustomError.js";
+import globalErrorHandler from "./middleware/globalErrorHandler.js";
+import routes from "./routes/index.js";
 
 const app = express();
 
+// SECURITY HEADERS
+app.use(helmet());
+
+// RATE LIMITING (set early to block excessive traffic ASAP)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per window
+  standardHeaders: true, // return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // disable `X-RateLimit-*` headers
+});
+app.use("/api", limiter); // Apply only to API routes (optional)
+
+// LOGGING
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
+// BODY PARSERS
 app.use(express.json({ limit: "20kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+
+// DATA SANITIZATION
+// app.use(xss()); // Prevent XSS
+app.use(hpp()); // Prevent HTTP parameter pollution
+
+// CORS
 app.use(
-  express.urlencoded({
-    extended: true,
-    inflate: true,
-    limit: "1mb",
-    parameterLimit: 5000,
-    type: "application/x-www-form-urlencoded",
+  cors({
+    origin: ["https://yourfrontend.com", "http://localhost:3000"],
+    credentials: true,
   })
 );
+
+// COMPRESSION
+app.use(compression());
+
+// ROUTES
+app.use("/api/v1/auth", routes.authRouter);
+
+// UNHANDLED ROUTES
+app.all("/*b", (req, res, next) => {
+  next(new CustomError(404, `Can't find ${req.originalUrl} on this server!`));
+});
+
+// GLOBAL ERROR HANDLER
+app.use(globalErrorHandler);
 
 export default app;
