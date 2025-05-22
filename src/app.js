@@ -6,13 +6,17 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
 // INTERNAL IMPORTS
 import CustomError from "./utils/CustomError.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import routes from "./routes/index.js";
+import isAuthenticated from "./middleware/isAuthenticated.js";
 
 const app = express();
+
+// app.set("trust proxy", true); //If behind a proxy (e.g., Vercel, Nginx)
 
 // SECURITY HEADERS
 app.use(helmet());
@@ -34,6 +38,7 @@ if (process.env.NODE_ENV === "development") {
 // BODY PARSERS
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
 
 // DATA SANITIZATION
 // app.use(xss()); // Prevent XSS
