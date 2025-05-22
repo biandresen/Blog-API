@@ -1,4 +1,3 @@
-// validators/userValidators.js
 import { body } from "express-validator";
 import userService from "../services/userService.js";
 
