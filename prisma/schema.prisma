@@ -35,8 +35,8 @@ model User {
 
 model BlogPost {
   id        Int       @id @default(autoincrement())
-  user      User      @relation(fields: [userId], references: [id])
-  userId    Int
+  user      User      @relation(fields: [authorId], references: [id])
+  authorId  Int
   title     String
   body      String
   published Boolean   @default(false)
@@ -48,8 +48,8 @@ model BlogPost {
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
+  user      User     @relation(fields: [authorId], references: [id])
+  authorId  Int
   post      BlogPost @relation(fields: [postId], references: [id])
   postId    Int
   body      String
