@@ -5,9 +5,10 @@ import { hashPassword, matchPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
 import CustomError from "../utils/CustomError.js";
 import authService from "../services/authService.js";
+import createUserPayload from "../utils/createUserPayload.js";
+import removePwFromUser from "../utils/removePwFromUser.js";
 
 async function registerUser(req, res, next) {
-  console.log("Controller");
   const validationErrors = validationResult(req);
   if (!validationErrors.isEmpty()) {
     return next(new CustomError(400, "Validation failed", validationErrors.array()));
@@ -23,8 +24,7 @@ async function registerUser(req, res, next) {
 
   const newUser = await userService.createUser(username, email, hashedPassword);
 
-  // Remove password from response
-  const { password: _pw, ...userWithoutPassword } = newUser;
+  const userWithoutPassword = removePwFromUser(newUser);
 
   res.status(201).json({
     status: "success",
@@ -51,7 +51,7 @@ async function loginUser(req, res, next) {
   const isMatch = await matchPassword(password, user.password);
   if (!isMatch) return next(new CustomError(401, "Invalid credentials"));
 
-  const tokenPayload = { id: user.id, username: user.username, email: user.email };
+  const tokenPayload = createUserPayload(user);
   const accessToken = jwt.sign(tokenPayload, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
   const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
@@ -84,7 +84,6 @@ async function logoutUser(req, res, next) {
   const token = req.cookies?.refreshToken;
   if (token) {
     const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    console.log(decodedUser);
     await authService.deleteRefreshToken(decodedUser.id, token);
   }
 
@@ -111,7 +110,7 @@ async function refreshAccessToken(req, res, next) {
   const isValid = await authService.getRefreshToken(decodedUser.id, token);
   if (!isValid) return next(new CustomError(400, "Invalid refresh token. Please login"));
 
-  const tokenPayload = { id: decodedUser.id, username: decodedUser.username, email: decodedUser.email };
+  const tokenPayload = createUserPayload(decodedUser);
   const accessToken = jwt.sign(tokenPayload, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
   const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
