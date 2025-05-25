@@ -21,7 +21,6 @@ async function createUser(username, email, password) {
     },
   });
 }
-
 export default {
   getUserById,
   getUserByUsername,

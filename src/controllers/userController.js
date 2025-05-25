@@ -14,7 +14,7 @@ async function getUserProfile(req, res, next) {
   if (!isAdmin && !isSelf) return next(new CustomError(403, "Forbidden. Please login."));
 
   const requestedUser = await userService.getUserById(userId);
-  if (!requestedUser) return next(new CustomError(401, `No user found with id of ${userId}`));
+  if (!requestedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
   const userWithoutPassword = removePwFromUser(requestedUser);
 
