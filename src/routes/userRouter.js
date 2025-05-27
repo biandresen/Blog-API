@@ -25,6 +25,7 @@ router.patch(
   changeRoleValidator,
   asyncErrorHandler(userController.changeUserRole)
 );
+router.patch("/:id/reactivate", isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
 router.delete("/:id", isAuthenticated, canAccessUser, asyncErrorHandler(userController.deleteUser));
 router.get("/:id/posts", asyncErrorHandler(postController.getAllPostsFromUser));
 

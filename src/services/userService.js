@@ -50,6 +50,13 @@ async function deleteUser(userId) {
   });
 }
 
+async function reactivateUser(userId) {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { active: true },
+  });
+}
+
 export default {
   getUserById,
   getUserByUsername,
@@ -58,4 +65,5 @@ export default {
   updateUser,
   changeRole,
   deleteUser,
+  reactivateUser,
 };

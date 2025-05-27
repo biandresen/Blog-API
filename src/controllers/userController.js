@@ -107,9 +107,25 @@ async function deleteUser(req, res, next) {
   });
 }
 
+async function reactivateUser(req, res, next) {
+  const userId = Number(req.params?.id);
+  if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
+
+  const reactivatedUser = await userService.reactivateUser(userId);
+  if (!reactivatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "User account successfully reactivated",
+    data: { id: userId, active: true },
+  });
+}
+
 export default {
   getUserProfile,
   updateUserProfile,
   changeUserRole,
+  reactivateUser,
   deleteUser,
 };
