@@ -1,15 +1,15 @@
 import prisma from "../config/prismaClient.js";
 
 async function getUserById(id) {
-  return await prisma.user.findFirst({ where: { id } });
+  return await prisma.user.findFirst({ where: { id, active: true } });
 }
 
 async function getUserByUsername(username) {
-  return await prisma.user.findFirst({ where: { username } });
+  return await prisma.user.findFirst({ where: { username, active: true } });
 }
 
 async function getUserByEmail(email) {
-  return await prisma.user.findFirst({ where: { email } });
+  return await prisma.user.findFirst({ where: { email, active: true } });
 }
 
 async function createUser(username, email, password) {
@@ -43,6 +43,13 @@ async function changeRole(userId, role) {
   });
 }
 
+async function deleteUser(userId) {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { active: false },
+  });
+}
+
 export default {
   getUserById,
   getUserByUsername,
@@ -50,4 +57,5 @@ export default {
   createUser,
   updateUser,
   changeRole,
+  deleteUser,
 };

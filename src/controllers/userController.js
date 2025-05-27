@@ -42,10 +42,6 @@ async function updateUserProfile(req, res, next) {
   const currentUser = req.user;
   if (!currentUser) return next(new CustomError(401, "Unauthorized. Please login."));
 
-  const isAdmin = currentUser?.role === ROLES.ADMIN_ROLE;
-  const isSelf = currentUser?.id === userId;
-  if (!isAdmin && !isSelf) return next(new CustomError(403, "Forbidden. Please login."));
-
   const userUpdateData = matchedData(req);
 
   if (userUpdateData.password) {
@@ -96,8 +92,24 @@ async function changeUserRole(req, res, next) {
   });
 }
 
+async function deleteUser(req, res, next) {
+  const userId = Number(req.params?.id);
+  if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
+
+  const deletedUser = await userService.deleteUser(userId);
+  if (!deletedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "User account successfully marked as inactive (soft-delete)",
+    data: { id: userId, active: false },
+  });
+}
+
 export default {
   getUserProfile,
   updateUserProfile,
   changeUserRole,
+  deleteUser,
 };
