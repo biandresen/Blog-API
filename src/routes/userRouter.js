@@ -4,6 +4,8 @@ import userController from "../controllers/userController.js";
 import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 import updateUserValidator from "../validation/updateUserValidation.js";
+import isAdmin from "../middleware/isAdmin.js";
+import changeRoleValidator from "../validation/changeRoleValidation.js";
 
 const router = Router();
 
@@ -13,6 +15,13 @@ router.patch(
   isAuthenticated,
   updateUserValidator,
   asyncErrorHandler(userController.updateUserProfile)
+);
+router.patch(
+  "/:id/role",
+  isAuthenticated,
+  isAdmin,
+  changeRoleValidator,
+  asyncErrorHandler(userController.changeUserRole)
 );
 router.get("/:id/posts", asyncErrorHandler(postController.getAllPostsFromUser));
 

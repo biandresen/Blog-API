@@ -36,10 +36,18 @@ async function updateUser(userId, updateData = {}) {
   });
 }
 
+async function changeRole(userId, role) {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: role,
+  });
+}
+
 export default {
   getUserById,
   getUserByUsername,
   getUserByEmail,
   createUser,
   updateUser,
+  changeRole,
 };

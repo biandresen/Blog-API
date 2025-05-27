@@ -4,6 +4,7 @@ import userService from "../services/userService.js";
 import removePwFromUser from "../utils/removePwFromUser.js";
 import CustomError from "../utils/CustomError.js";
 import { ROLES } from "../constants.js";
+import ensureAllowedFields from "../utils/ensureAllowedFields.js";
 
 async function getUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);
@@ -54,10 +55,7 @@ async function updateUserProfile(req, res, next) {
     delete userUpdateData.password;
   }
 
-  const allowedFields = ["username", "email", "password", "avatar"];
-  const fieldsToUpdate = Object.fromEntries(
-    Object.entries(userUpdateData).filter(([key]) => allowedFields.includes(key))
-  );
+  const fieldsToUpdate = ensureAllowedFields(userUpdateData, [("username", "email", "password", "avatar")]);
 
   const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
   if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
@@ -72,7 +70,34 @@ async function updateUserProfile(req, res, next) {
   });
 }
 
+async function changeUserRole(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
+  const userId = parseInt(req.params?.id);
+  if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
+
+  const userUpdateData = matchedData(req);
+
+  const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["role"]);
+
+  const updatedUser = await userService.changeRole(userId, fieldsToUpdate);
+  if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+
+  const userWithoutPassword = removePwFromUser(updatedUser);
+
+  res.status(201).json({
+    status: "success",
+    statusCode: 201,
+    message: "User role updated successfully",
+    data: userWithoutPassword,
+  });
+}
+
 export default {
   getUserProfile,
   updateUserProfile,
+  changeUserRole,
 };
