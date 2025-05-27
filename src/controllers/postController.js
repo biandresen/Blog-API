@@ -31,7 +31,23 @@ async function getAllPostsFromUser(req, res, next) {
   });
 }
 
+async function getPost(req, res, next) {
+  const postId = Number(req.params?.id);
+  if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+
+  const post = await postService.getPostById(postId);
+  if (!post) return next(new CustomError(404, `No post found with id ${postId}`));
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Post retrieved successfully",
+    data: post,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
+  getPost,
 };

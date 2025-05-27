@@ -69,7 +69,14 @@ async function getAllPostsByUser(userId, { page = 1, limit = 10, sort = "desc", 
   });
 }
 
+async function getPostById(postId) {
+  return await prisma.blogPost.findFirst({
+    where: { id: postId, published: true },
+  });
+}
+
 export default {
   getAllPosts,
   getAllPostsByUser,
+  getPostById,
 };
