@@ -1,8 +1,18 @@
+import { matchedData, validationResult } from "express-validator";
 import postService from "../services/postService.js";
 import CustomError from "../utils/CustomError.js";
 
 async function getAllPosts(req, res, next) {
   const queryParams = req.query;
+
+  // Normalize tags if present
+  if (queryParams.tag) {
+    queryParams.tag =
+      Array.isArray(queryParams.tag) ?
+        queryParams.tag.map((t) => t.trim().toLowerCase())
+      : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
+  }
+
   const posts = await postService.getAllPosts(queryParams);
 
   res.status(200).json({
@@ -19,6 +29,14 @@ async function getAllPostsFromUser(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
   const queryParams = req.query;
+
+  // Normalize tags if present
+  if (queryParams.tag) {
+    queryParams.tag =
+      Array.isArray(queryParams.tag) ?
+        queryParams.tag.map((t) => t.trim().toLowerCase())
+      : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
+  }
 
   const posts = await postService.getAllPostsByUser(userId, queryParams);
 
@@ -46,8 +64,30 @@ async function getPost(req, res, next) {
   });
 }
 
+async function createPost(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
+  const { title, body, published, tags } = matchedData(req);
+  const authorId = req.user?.id;
+
+  const normalizedTags = tags.map((tag) => tag.toLowerCase());
+
+  const createdPost = await postService.createPost(authorId, title, body, published, normalizedTags);
+
+  res.status(201).json({
+    status: "success",
+    statusCode: 201,
+    message: published === true ? "Post was successfully published" : "Post was successfully drafted",
+    data: createdPost,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
   getPost,
+  createPost,
 };

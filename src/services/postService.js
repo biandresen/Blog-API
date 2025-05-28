@@ -8,10 +8,12 @@ async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } =
   return await prisma.blogPost.findMany({
     where: {
       published: true,
-      ...(tag && {
+      ...(tag?.length && {
         tags: {
           some: {
-            name: tag,
+            name: {
+              in: tag,
+            },
           },
         },
       }),
@@ -41,12 +43,13 @@ async function getAllPostsByUser(userId, { page = 1, limit = 10, sort = "desc", 
 
   return await prisma.blogPost.findMany({
     where: {
-      authorId: userId,
       published: true,
-      ...(tag && {
+      ...(tag?.length && {
         tags: {
           some: {
-            name: tag,
+            name: {
+              in: tag,
+            },
           },
         },
       }),
@@ -75,8 +78,29 @@ async function getPostById(postId) {
   });
 }
 
+async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
+  return await prisma.blogPost.create({
+    data: {
+      authorId,
+      title,
+      body,
+      published,
+      tags: {
+        connectOrCreate: tags.map((tagName) => ({
+          where: { name: tagName },
+          create: { name: tagName },
+        })),
+      },
+    },
+    include: {
+      tags: true,
+    },
+  });
+}
+
 export default {
   getAllPosts,
   getAllPostsByUser,
   getPostById,
+  createPost,
 };
