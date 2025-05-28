@@ -6,7 +6,7 @@ import isAuthenticated from "../middleware/isAuthenticated.js";
 import updateUserValidator from "../validation/updateUserValidation.js";
 import isAdmin from "../middleware/isAdmin.js";
 import changeRoleValidator from "../validation/changeRoleValidation.js";
-import canAccessUser from "../middleware/canAccessUser.js";
+import isSelfOrAdmin from "../middleware/isSelfOrAdmin.js";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.get("/:id", isAuthenticated, asyncErrorHandler(userController.getUserProf
 router.patch(
   "/:id",
   isAuthenticated,
-  canAccessUser,
+  isSelfOrAdmin,
   updateUserValidator,
   asyncErrorHandler(userController.updateUserProfile)
 );
@@ -26,7 +26,7 @@ router.patch(
   asyncErrorHandler(userController.changeUserRole)
 );
 router.patch("/:id/reactivate", isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
-router.delete("/:id", isAuthenticated, canAccessUser, asyncErrorHandler(userController.deleteUser));
+router.delete("/:id", isAuthenticated, isSelfOrAdmin, asyncErrorHandler(userController.deleteUser));
 router.get("/:id/posts", asyncErrorHandler(postController.getAllPostsFromUser));
 
 export default router;

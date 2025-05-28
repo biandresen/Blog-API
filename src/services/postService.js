@@ -72,10 +72,22 @@ async function getAllPostsByUser(userId, { page = 1, limit = 10, sort = "desc", 
   });
 }
 
-async function getPostById(postId) {
-  return await prisma.blogPost.findFirst({
-    where: { id: postId, published: true },
-  });
+async function getPostById(postId, { includeUnpublished = false } = {}) {
+  const where = { id: postId };
+  if (!includeUnpublished) {
+    where.published = true;
+  }
+
+  return await prisma.blogPost.findFirst({ where });
+}
+
+async function getPostsByAuthor(authorId, { publishedOnly = true } = {}) {
+  const where = { authorId };
+  if (publishedOnly) {
+    where.published = true;
+  }
+
+  return await prisma.blogPost.findMany({ where });
 }
 
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
@@ -98,9 +110,35 @@ async function createPost(authorId, title = "Title", body = "Body...", published
   });
 }
 
+async function updatePost(postId, { title, body, published, tags }) {
+  const updateData = {};
+
+  if (title !== undefined) updateData.title = title;
+  if (body !== undefined) updateData.body = body;
+  if (published !== undefined) updateData.published = published;
+
+  if (tags !== undefined) {
+    updateData.tags = {
+      set: [], // Remove all old tags
+      connectOrCreate: tags.map((tagName) => ({
+        where: { name: tagName },
+        create: { name: tagName },
+      })),
+    };
+  }
+
+  return await prisma.blogPost.update({
+    where: { id: postId },
+    data: updateData,
+    include: { tags: true },
+  });
+}
+
 export default {
   getAllPosts,
   getAllPostsByUser,
   getPostById,
+  getPostsByAuthor,
   createPost,
+  updatePost,
 };

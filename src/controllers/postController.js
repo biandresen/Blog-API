@@ -71,7 +71,7 @@ async function createPost(req, res, next) {
   }
 
   const { title, body, published, tags } = matchedData(req);
-  const authorId = req.user?.id;
+  const authorId = req.user?.id; //authorId is checked in previous middleware
 
   const normalizedTags = tags.map((tag) => tag.toLowerCase());
 
@@ -85,9 +85,37 @@ async function createPost(req, res, next) {
   });
 }
 
+async function updatePost(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
+  const postId = Number(req.params?.id); //postId is checked in previous middleware
+
+  const { title, body, published, tags } = matchedData(req);
+
+  const normalizedTags = tags ? tags.map((tag) => tag.toLowerCase()) : undefined;
+
+  const updatedPost = await postService.updatePost(postId, {
+    title,
+    body,
+    published,
+    tags: normalizedTags,
+  });
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Post was successfully updated",
+    data: updatedPost,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
   getPost,
   createPost,
+  updatePost,
 };
