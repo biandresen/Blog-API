@@ -112,10 +112,26 @@ async function updatePost(req, res, next) {
   });
 }
 
+async function deletePost(req, res, next) {
+  const postId = Number(req.params?.id); //postId is checked in previous middleware
+
+  const deletedPost = await postService.deletePost(postId);
+  if (!deletedPost) return next(new CustomError(404, `No post found with id ${postId}`));
+
+  res.status(204).send();
+  // .json({
+  //   status: "success",
+  //   statusCode: 204,
+  //   message: "Post successfully deleted",
+  //   data: null,
+  // });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
   getPost,
   createPost,
   updatePost,
+  deletePost,
 };

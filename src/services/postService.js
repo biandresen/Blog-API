@@ -134,6 +134,12 @@ async function updatePost(postId, { title, body, published, tags }) {
   });
 }
 
+async function deletePost(postId) {
+  return await prisma.blogPost.delete({
+    where: { id: postId },
+  });
+}
+
 export default {
   getAllPosts,
   getAllPostsByUser,
@@ -141,4 +147,5 @@ export default {
   getPostsByAuthor,
   createPost,
   updatePost,
+  deletePost,
 };

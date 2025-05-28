@@ -50,7 +50,7 @@ model Comment {
   id        Int      @id @default(autoincrement())
   user      User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  post      BlogPost @relation(fields: [postId], references: [id])
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
   body      String
   createdAt DateTime @default(now())

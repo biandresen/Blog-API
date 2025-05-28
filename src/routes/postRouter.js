@@ -17,6 +17,7 @@ router.patch(
   updatePostValidator,
   asyncErrorHandler(postController.updatePost)
 );
+router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
 
 export default router;
