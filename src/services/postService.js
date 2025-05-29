@@ -193,6 +193,74 @@ async function publishDraft(postId) {
   });
 }
 
+async function searchPosts(searchParameters, { page = 1, limit = 10, sort = "desc" } = {}) {
+  const parsedPage = parseInt(page);
+  const parsedLimit = parseInt(limit);
+  const skip = (parsedPage - 1) * parsedLimit;
+
+  const orConditions = searchParameters.flatMap((term) => [
+    {
+      title: {
+        contains: term,
+        mode: "insensitive",
+      },
+    },
+    {
+      body: {
+        contains: term,
+        mode: "insensitive",
+      },
+    },
+    {
+      tags: {
+        some: {
+          name: {
+            contains: term,
+            mode: "insensitive",
+          },
+        },
+      },
+    },
+  ]);
+
+  return await prisma.blogPost.findMany({
+    where: {
+      published: true,
+      OR: orConditions,
+    },
+    orderBy: {
+      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+    },
+    skip,
+    take: parsedLimit,
+    include: {
+      tags: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      comments: {
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 export default {
   getAllPosts,
   getAllDrafts,
@@ -202,4 +270,5 @@ export default {
   updatePost,
   deletePost,
   publishDraft,
+  searchPosts,
 };

@@ -8,9 +8,11 @@ import isAdmin from "../middleware/isAdmin.js";
 import updatePostValidator from "../validation/updatePostValidator.js";
 import newPostValidator from "../validation/newPostValidator.js";
 import newCommentValidator from "../validation/newCommentValidator.js";
+import searchParametersValidator from "../validation/searchParametersValidator.js";
 
 const router = Router();
 
+router.get("/search", searchParametersValidator, asyncErrorHandler(postController.searchPosts));
 router.get("/drafts", isAuthenticated, asyncErrorHandler(postController.getAllDraftsForCurrentUser));
 router.get("/drafts/all", isAuthenticated, isAdmin, asyncErrorHandler(postController.getAllDrafts));
 router.get("/:id", asyncErrorHandler(postController.getPost));

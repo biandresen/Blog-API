@@ -190,6 +190,41 @@ async function publishDraft(req, res, next) {
   });
 }
 
+async function searchPosts(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty())
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+
+  const { searchParameters, page, limit, sort } = matchedData(req);
+
+  if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
+    return res.status(400).json({
+      status: "failed",
+      statusCode: 400,
+      message: "No search parameters were given",
+      data: [],
+    });
+  }
+
+  const arrayOfSearchParams = searchParameters
+    .split(/[\s,]+/) // split on spaces or commas
+    .filter(Boolean); // remove empty strings
+
+  if (!Array.isArray(arrayOfSearchParams) || arrayOfSearchParams.length === 0) {
+    return next(new CustomError(400, "Invalid entry of search parameters"));
+  }
+
+  const posts = await postService.searchPosts(arrayOfSearchParams, { page, limit, sort });
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    count: posts.length,
+    message: posts.length > 0 ? "Posts retrieved successfully" : "No posts were found",
+    data: posts.length > 0 ? posts : [],
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
@@ -200,4 +235,5 @@ export default {
   getAllDraftsForCurrentUser,
   getAllDrafts,
   publishDraft,
+  searchPosts,
 };
