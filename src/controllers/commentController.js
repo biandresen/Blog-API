@@ -39,7 +39,23 @@ async function getAllCommentsFromPost(req, res, next) {
   });
 }
 
+async function deleteComment(req, res, next) {
+  const commentId = Number(req.params?.id); //commentId is checked in previous middleware
+
+  const deletedComment = await commentService.deleteComment(commentId);
+  if (!deletedComment) return next(new CustomError(404, `No post found with id ${commentId}`));
+
+  res.status(204).send();
+  // .json({
+  //   status: "success",
+  //   statusCode: 204,
+  //   message: "Post successfully deleted",
+  //   data: null,
+  // });
+}
+
 export default {
   createComment,
   getAllCommentsFromPost,
+  deleteComment,
 };

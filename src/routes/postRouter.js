@@ -4,7 +4,7 @@ import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 import newPostValidator from "../validation/newPostValidation.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 import updatePostValidator from "../validation/updatePostValidation.js";
-import isAuthorOrAdmin from "../middleware/isAuthorOrAdmin.js";
+import isPostAuthorOrAdmin from "../middleware/isPostAuthorOrAdmin.js";
 import isAdmin from "../middleware/isAdmin.js";
 import newCommentValidator from "../validation/newCommentValidation.js";
 import commentController from "../controllers/commentController.js";
@@ -18,13 +18,13 @@ router.get("/", asyncErrorHandler(postController.getAllPosts));
 router.patch(
   "/:id/publish",
   isAuthenticated,
-  isAuthorOrAdmin,
+  isPostAuthorOrAdmin,
   asyncErrorHandler(postController.publishDraft)
 );
 router.patch(
   "/:id",
   isAuthenticated,
-  isAuthorOrAdmin,
+  isPostAuthorOrAdmin,
   updatePostValidator,
   asyncErrorHandler(postController.updatePost)
 );
@@ -36,6 +36,6 @@ router.post(
 );
 router.get("/:id/comments", asyncErrorHandler(commentController.getAllCommentsFromPost));
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
-router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
+router.delete("/:id", isAuthenticated, isPostAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 
 export default router;

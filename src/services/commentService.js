@@ -26,7 +26,21 @@ async function getAllCommentsFromPost(postId) {
   });
 }
 
+async function getCommentById(commentId) {
+  return await prisma.comment.findUnique({
+    where: { id: commentId },
+  });
+}
+
+async function deleteComment(commentId) {
+  return await prisma.comment.delete({
+    where: { id: commentId },
+  });
+}
+
 export default {
   createComment,
   getAllCommentsFromPost,
+  getCommentById,
+  deleteComment,
 };
