@@ -25,7 +25,25 @@ async function getTagById(tagId) {
   });
 }
 
+async function getTagByName(tagName) {
+  return await prisma.tag.findUnique({
+    where: { name: tagName },
+  });
+}
+
+async function createTag(tagName) {
+  tagName = tagName.toLowerCase();
+
+  return await prisma.tag.create({
+    data: {
+      name: tagName,
+    },
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
+  getTagByName,
+  createTag,
 };

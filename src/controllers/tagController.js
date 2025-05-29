@@ -1,3 +1,4 @@
+import { validationResult, matchedData } from "express-validator";
 import tagService from "../services/tagService.js";
 import CustomError from "../utils/CustomError.js";
 
@@ -30,7 +31,26 @@ async function getTagById(req, res, next) {
   });
 }
 
+async function createTag(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
+  const { tag: tagName } = matchedData(req);
+
+  const createdTag = await tagService.createTag(tagName);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Tag created successfully",
+    data: createdTag,
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
+  createTag,
 };
