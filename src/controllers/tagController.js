@@ -41,9 +41,9 @@ async function createTag(req, res, next) {
 
   const createdTag = await tagService.createTag(tagName);
 
-  res.status(200).json({
+  res.status(201).json({
     status: "success",
-    statusCode: 200,
+    statusCode: 201,
     message: "Tag created successfully",
     data: createdTag,
   });
@@ -70,9 +70,26 @@ async function editTag(req, res, next) {
   });
 }
 
+async function deleteTag(req, res, next) {
+  const tagId = Number(req.params.id);
+  if (!tagId) return next(new CustomError(400, "Invalid tag id given"));
+
+  const deletedTag = await tagService.deleteTag(tagId);
+  if (!deletedTag) return next(new CustomError(404, `No tag found with id ${tagId}`));
+
+  res.status(204).send();
+  // .json({
+  //   status: "success",
+  //   statusCode: 200,
+  //   message: "Tag deleted successfully",
+  //   data: null,
+  // });
+}
+
 export default {
   getAllTags,
   getTagById,
   createTag,
   editTag,
+  deleteTag,
 };

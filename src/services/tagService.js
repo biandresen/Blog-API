@@ -52,10 +52,17 @@ async function updateTag(tagId, tagName) {
   });
 }
 
+async function deleteTag(tagId) {
+  return await prisma.tag.delete({
+    where: { id: tagId },
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
   getTagByName,
   createTag,
   updateTag,
+  deleteTag,
 };
