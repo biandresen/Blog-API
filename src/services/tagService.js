@@ -41,9 +41,21 @@ async function createTag(tagName) {
   });
 }
 
+async function updateTag(tagId, tagName) {
+  tagName = tagName.toLowerCase();
+
+  return await prisma.tag.update({
+    where: { id: tagId },
+    data: {
+      name: tagName,
+    },
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
   getTagByName,
   createTag,
+  updateTag,
 };

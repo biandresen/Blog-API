@@ -49,8 +49,30 @@ async function createTag(req, res, next) {
   });
 }
 
+async function editTag(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
+  const tagId = Number(req.params.id);
+  if (!tagId) return next(new CustomError(400, "Invalid tag id given"));
+
+  const { tag: tagName } = matchedData(req);
+
+  const editedTag = await tagService.updateTag(tagId, tagName);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Tag edited successfully",
+    data: editedTag,
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
   createTag,
+  editTag,
 };
