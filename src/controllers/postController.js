@@ -19,8 +19,8 @@ async function getAllPosts(req, res, next) {
     status: "success",
     statusCode: 200,
     count: posts.length,
-    message: posts.length === 0 ? "No posts found for this user" : "Posts retrieved successfully",
-    data: posts,
+    message: posts.length > 0 ? "Posts retrieved successfully" : "No posts found for this user",
+    data: posts.length > 0 ? posts : [],
   });
 }
 
@@ -44,8 +44,8 @@ async function getAllPostsFromUser(req, res, next) {
     status: "success",
     statusCode: 200,
     count: posts.length,
-    message: posts.length === 0 ? "No posts found for this user" : "Posts retrieved successfully",
-    data: posts,
+    message: posts.length > 0 ? "Posts retrieved successfully" : "No posts found for this user",
+    data: posts.length > 0 ? posts : [],
   });
 }
 
@@ -149,7 +149,7 @@ async function getAllDraftsForCurrentUser(req, res, next) {
     status: "success",
     statusCode: 200,
     count: drafts.length,
-    message: drafts.length === 0 ? "No drafts found for this user" : "Drafts retrieved successfully",
+    message: drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user",
     data: drafts.length > 0 ? drafts : [],
   });
 }
@@ -171,7 +171,7 @@ async function getAllDrafts(req, res, next) {
     status: "success",
     statusCode: 200,
     count: drafts.length,
-    message: drafts.length === 0 ? "No drafts found" : "Drafts retrieved successfully",
+    message: drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found",
     data: drafts.length > 0 ? drafts : [],
   });
 }
