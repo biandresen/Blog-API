@@ -149,7 +149,7 @@ async function getAllDraftsForCurrentUser(req, res, next) {
     status: "success",
     statusCode: 200,
     count: drafts.length,
-    message: drafts.length === 0 ? "No posts found for this user" : "Posts retrieved successfully",
+    message: drafts.length === 0 ? "No drafts found for this user" : "Drafts retrieved successfully",
     data: drafts,
   });
 }
@@ -176,6 +176,20 @@ async function getAllDrafts(req, res, next) {
   });
 }
 
+async function publishDraft(req, res, next) {
+  const postId = Number(req.params?.id); //postId is checked in previous middleware
+
+  const publishedDraft = await postService.publishDraft(postId);
+  if (!publishedDraft) return next(new CustomError(404, `No post found with id ${postId}`));
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Draft successfully published",
+    data: publishedDraft,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
@@ -185,4 +199,5 @@ export default {
   deletePost,
   getAllDraftsForCurrentUser,
   getAllDrafts,
+  publishDraft,
 };

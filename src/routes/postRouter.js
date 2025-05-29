@@ -14,6 +14,12 @@ router.get("/drafts/all", isAuthenticated, isAdmin, asyncErrorHandler(postContro
 router.get("/:id", asyncErrorHandler(postController.getPost));
 router.get("/", asyncErrorHandler(postController.getAllPosts));
 router.patch(
+  "/:id/publish",
+  isAuthenticated,
+  isAuthorOrAdmin,
+  asyncErrorHandler(postController.publishDraft)
+);
+router.patch(
   "/:id",
   isAuthenticated,
   isAuthorOrAdmin,

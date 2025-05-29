@@ -9,7 +9,7 @@ async function isAuthorOrAdmin(req, res, next) {
 
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
-  const post = await postService.getPostById(postId, { includeUnpublished: true });
+  const post = await postService.getPostById(postId);
   if (!post) return next(new CustomError(404, "Post not found"));
 
   if (role === ROLES.ADMIN_ROLE || post.authorId === userId) {

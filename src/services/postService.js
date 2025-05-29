@@ -112,13 +112,26 @@ async function getAllPostsByAuthor(
   });
 }
 
-async function getPostById(postId, { published = true } = {}) {
-  const where = {
-    id: postId,
-    ...(typeof published === "boolean" && { published }),
-  };
+async function getPostById(postId, { published } = {}) {
+  const whereClause = { id: postId };
 
-  return await prisma.blogPost.findFirst({ where });
+  if (typeof published === "boolean") {
+    whereClause.published = published;
+  }
+
+  return await prisma.blogPost.findUnique({
+    where: whereClause,
+    include: {
+      tags: true,
+      comments: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
 }
 
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
@@ -171,6 +184,15 @@ async function deletePost(postId) {
   });
 }
 
+async function publishDraft(postId) {
+  return await prisma.blogPost.update({
+    where: { id: postId },
+    data: {
+      published: true,
+    },
+  });
+}
+
 export default {
   getAllPosts,
   getAllDrafts,
@@ -179,4 +201,5 @@ export default {
   createPost,
   updatePost,
   deletePost,
+  publishDraft,
 };
