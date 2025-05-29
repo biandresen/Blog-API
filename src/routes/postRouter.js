@@ -6,6 +6,8 @@ import isAuthenticated from "../middleware/isAuthenticated.js";
 import updatePostValidator from "../validation/updatePostValidation.js";
 import isAuthorOrAdmin from "../middleware/isAuthorOrAdmin.js";
 import isAdmin from "../middleware/isAdmin.js";
+import newCommentValidator from "../validation/newCommentValidation.js";
+import commentController from "../controllers/commentController.js";
 
 const router = Router();
 
@@ -25,6 +27,12 @@ router.patch(
   isAuthorOrAdmin,
   updatePostValidator,
   asyncErrorHandler(postController.updatePost)
+);
+router.post(
+  "/:id/comments",
+  isAuthenticated,
+  newCommentValidator,
+  asyncErrorHandler(commentController.createComment)
 );
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
 router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
