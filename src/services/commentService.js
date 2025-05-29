@@ -10,16 +10,23 @@ async function createComment(postId, authorId, body) {
   });
 }
 
-async function getAllCommentsFromPost(postId) {
+async function getAllCommentsFromPost(postId, { page = 1, limit = 10, sort = "desc" } = {}) {
+  const parsedPage = parseInt(page) || 1;
+  const parsedLimit = parseInt(limit) || 10;
+  const skip = (parsedPage - 1) * parsedLimit;
+
   return await prisma.comment.findMany({
     where: { postId },
-    orderBy: { createdAt: "asc" },
+    orderBy: {
+      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+    },
+    skip,
+    take: parsedLimit,
     include: {
       user: {
         select: {
           id: true,
           username: true,
-          avatar: true,
         },
       },
     },

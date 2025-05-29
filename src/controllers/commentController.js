@@ -28,7 +28,9 @@ async function getAllCommentsFromPost(req, res, next) {
   const postId = Number(req.params?.id);
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
-  const comments = await commentService.getAllCommentsFromPost(postId);
+  const queryParams = req.query;
+
+  const comments = await commentService.getAllCommentsFromPost(postId, queryParams);
 
   res.status(200).json({
     status: "success",
