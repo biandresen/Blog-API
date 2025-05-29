@@ -36,6 +36,42 @@ async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } =
   });
 }
 
+async function getAllDrafts({ page = 1, limit = 10, sort = "desc", tag = null } = {}) {
+  const parsedPage = parseInt(page) || 1;
+  const parsedLimit = parseInt(limit) || 10;
+  const skip = (parsedPage - 1) * parsedLimit;
+
+  return await prisma.blogPost.findMany({
+    where: {
+      published: false,
+      ...(tag?.length && {
+        tags: {
+          some: {
+            name: {
+              in: tag,
+            },
+          },
+        },
+      }),
+    },
+    orderBy: {
+      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+    },
+    skip,
+    take: parsedLimit,
+    include: {
+      tags: true,
+      comments: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+}
+
 async function getAllPostsByAuthor(
   authorId,
   { page = 1, limit = 10, sort = "desc", tag = null, published = true } = {}
@@ -137,6 +173,7 @@ async function deletePost(postId) {
 
 export default {
   getAllPosts,
+  getAllDrafts,
   getAllPostsByAuthor,
   getPostById,
   createPost,

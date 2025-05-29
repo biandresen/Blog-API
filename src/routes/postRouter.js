@@ -5,10 +5,12 @@ import newPostValidator from "../validation/newPostValidation.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 import updatePostValidator from "../validation/updatePostValidation.js";
 import isAuthorOrAdmin from "../middleware/isAuthorOrAdmin.js";
+import isAdmin from "../middleware/isAdmin.js";
 
 const router = Router();
 
 router.get("/drafts", isAuthenticated, asyncErrorHandler(postController.getAllDraftsForCurrentUser));
+router.get("/drafts/all", isAuthenticated, isAdmin, asyncErrorHandler(postController.getAllDrafts));
 router.get("/:id", asyncErrorHandler(postController.getPost));
 router.get("/", asyncErrorHandler(postController.getAllPosts));
 router.patch(

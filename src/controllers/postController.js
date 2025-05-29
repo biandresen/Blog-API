@@ -154,6 +154,28 @@ async function getAllDraftsForCurrentUser(req, res, next) {
   });
 }
 
+async function getAllDrafts(req, res, next) {
+  const queryParams = req.query;
+
+  // Normalize tags if present
+  if (queryParams.tag) {
+    queryParams.tag =
+      Array.isArray(queryParams.tag) ?
+        queryParams.tag.map((t) => t.trim().toLowerCase())
+      : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
+  }
+
+  const drafts = await postService.getAllDrafts(queryParams);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    count: drafts.length,
+    message: drafts.length === 0 ? "No drafts found" : "Drafts retrieved successfully",
+    data: drafts,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
@@ -162,4 +184,5 @@ export default {
   updatePost,
   deletePost,
   getAllDraftsForCurrentUser,
+  getAllDrafts,
 };
