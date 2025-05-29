@@ -150,7 +150,7 @@ async function getAllDraftsForCurrentUser(req, res, next) {
     statusCode: 200,
     count: drafts.length,
     message: drafts.length === 0 ? "No drafts found for this user" : "Drafts retrieved successfully",
-    data: drafts,
+    data: drafts.length > 0 ? drafts : [],
   });
 }
 
@@ -172,7 +172,7 @@ async function getAllDrafts(req, res, next) {
     statusCode: 200,
     count: drafts.length,
     message: drafts.length === 0 ? "No drafts found" : "Drafts retrieved successfully",
-    data: drafts,
+    data: drafts.length > 0 ? drafts : [],
   });
 }
 

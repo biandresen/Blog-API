@@ -34,6 +34,7 @@ router.post(
   newCommentValidator,
   asyncErrorHandler(commentController.createComment)
 );
+router.get("/:id/comments", asyncErrorHandler(commentController.getAllCommentsFromPost));
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
 router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 

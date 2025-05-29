@@ -24,6 +24,22 @@ async function createComment(req, res, next) {
   });
 }
 
+async function getAllCommentsFromPost(req, res, next) {
+  const postId = Number(req.params?.id);
+  if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
+
+  const comments = await commentService.getAllCommentsFromPost(postId);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: comments.length > 0 ? "Comments successfully retrieved" : "No comments found",
+    count: comments.length,
+    data: comments.length > 0 ? comments : [],
+  });
+}
+
 export default {
   createComment,
+  getAllCommentsFromPost,
 };

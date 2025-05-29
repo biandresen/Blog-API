@@ -10,6 +10,23 @@ async function createComment(postId, authorId, body) {
   });
 }
 
+async function getAllCommentsFromPost(postId) {
+  return await prisma.comment.findMany({
+    where: { postId },
+    orderBy: { createdAt: "asc" },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+  });
+}
+
 export default {
   createComment,
+  getAllCommentsFromPost,
 };
