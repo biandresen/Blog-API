@@ -19,6 +19,13 @@ async function getAllTags({ page = 1, limit = 20, sort = "name", sortOrder = "as
   });
 }
 
+async function getTagById(tagId) {
+  return await prisma.tag.findUnique({
+    where: { id: tagId },
+  });
+}
+
 export default {
   getAllTags,
+  getTagById,
 };
