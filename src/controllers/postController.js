@@ -38,7 +38,7 @@ async function getAllPostsFromUser(req, res, next) {
       : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
   }
 
-  const posts = await postService.getAllPostsByUser(userId, queryParams);
+  const posts = await postService.getAllPostsByAuthor(userId, queryParams);
 
   res.status(200).json({
     status: "success",
@@ -127,6 +127,33 @@ async function deletePost(req, res, next) {
   // });
 }
 
+async function getAllDraftsForCurrentUser(req, res, next) {
+  const userId = Number(req.user?.id);
+  if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
+
+  const queryParams = req.query;
+
+  // Normalize tags if present
+  if (queryParams.tag) {
+    queryParams.tag =
+      Array.isArray(queryParams.tag) ?
+        queryParams.tag.map((t) => t.trim().toLowerCase())
+      : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
+  }
+
+  queryParams.published = false;
+
+  const drafts = await postService.getAllPostsByAuthor(userId, queryParams);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    count: drafts.length,
+    message: drafts.length === 0 ? "No posts found for this user" : "Posts retrieved successfully",
+    data: drafts,
+  });
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
@@ -134,4 +161,5 @@ export default {
   createPost,
   updatePost,
   deletePost,
+  getAllDraftsForCurrentUser,
 };

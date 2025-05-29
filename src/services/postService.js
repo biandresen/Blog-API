@@ -36,14 +36,18 @@ async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } =
   });
 }
 
-async function getAllPostsByUser(userId, { page = 1, limit = 10, sort = "desc", tag = null } = {}) {
+async function getAllPostsByAuthor(
+  authorId,
+  { page = 1, limit = 10, sort = "desc", tag = null, published = true } = {}
+) {
   const parsedPage = parseInt(page) || 1;
   const parsedLimit = parseInt(limit) || 10;
   const skip = (parsedPage - 1) * parsedLimit;
 
   return await prisma.blogPost.findMany({
     where: {
-      published: true,
+      authorId,
+      ...(typeof published === "boolean" && { published }),
       ...(tag?.length && {
         tags: {
           some: {
@@ -72,22 +76,13 @@ async function getAllPostsByUser(userId, { page = 1, limit = 10, sort = "desc", 
   });
 }
 
-async function getPostById(postId, { includeUnpublished = false } = {}) {
-  const where = { id: postId };
-  if (!includeUnpublished) {
-    where.published = true;
-  }
+async function getPostById(postId, { published = true } = {}) {
+  const where = {
+    id: postId,
+    ...(typeof published === "boolean" && { published }),
+  };
 
   return await prisma.blogPost.findFirst({ where });
-}
-
-async function getPostsByAuthor(authorId, { publishedOnly = true } = {}) {
-  const where = { authorId };
-  if (publishedOnly) {
-    where.published = true;
-  }
-
-  return await prisma.blogPost.findMany({ where });
 }
 
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
@@ -142,9 +137,8 @@ async function deletePost(postId) {
 
 export default {
   getAllPosts,
-  getAllPostsByUser,
+  getAllPostsByAuthor,
   getPostById,
-  getPostsByAuthor,
   createPost,
   updatePost,
   deletePost,

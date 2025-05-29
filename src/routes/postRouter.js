@@ -8,8 +8,9 @@ import isAuthorOrAdmin from "../middleware/isAuthorOrAdmin.js";
 
 const router = Router();
 
-router.get("/", asyncErrorHandler(postController.getAllPosts));
+router.get("/drafts", isAuthenticated, asyncErrorHandler(postController.getAllDraftsForCurrentUser));
 router.get("/:id", asyncErrorHandler(postController.getPost));
+router.get("/", asyncErrorHandler(postController.getAllPosts));
 router.patch(
   "/:id",
   isAuthenticated,
@@ -17,7 +18,7 @@ router.patch(
   updatePostValidator,
   asyncErrorHandler(postController.updatePost)
 );
-router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
+router.delete("/:id", isAuthenticated, isAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 
 export default router;
