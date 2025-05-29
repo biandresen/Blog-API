@@ -7,6 +7,7 @@ import isAdmin from "../middleware/isAdmin.js";
 
 const router = Router();
 
+router.get("/popular", asyncErrorHandler(tagController.getPopularTags));
 router.get("/", asyncErrorHandler(tagController.getAllTags));
 router.get("/:id", asyncErrorHandler(tagController.getTagById));
 router.patch("/:id", isAuthenticated, isAdmin, newTagValidator, asyncErrorHandler(tagController.editTag));

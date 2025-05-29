@@ -58,6 +58,22 @@ async function deleteTag(tagId) {
   });
 }
 
+async function getPopularTags(limit = 10) {
+  return await prisma.tag.findMany({
+    orderBy: {
+      posts: {
+        _count: "desc",
+      },
+    },
+    take: limit,
+    include: {
+      _count: {
+        select: { posts: true },
+      },
+    },
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
@@ -65,4 +81,5 @@ export default {
   createTag,
   updateTag,
   deleteTag,
+  getPopularTags,
 };

@@ -86,10 +86,26 @@ async function deleteTag(req, res, next) {
   // });
 }
 
+async function getPopularTags(req, res, next) {
+  const limit = Number(req.query.limit) || 10;
+  if (isNaN(limit)) return next(new CustomError(400, "Invalid limit given"));
+
+  const tags = await tagService.getPopularTags(limit);
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    count: tags.length,
+    message: tags.length > 0 ? "Tags retrieved successfully" : "No tags found",
+    data: tags.length > 0 ? tags : [],
+  });
+}
+
 export default {
   getAllTags,
   getTagById,
   createTag,
   editTag,
   deleteTag,
+  getPopularTags,
 };
