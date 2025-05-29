@@ -12,9 +12,9 @@ async function createComment(req, res, next) {
 
   const authorId = req.user?.id;
 
-  const { comment: commentText } = matchedData(req);
+  const { comment: commentBody } = matchedData(req);
 
-  const comment = await commentService.createComment(postId, authorId, commentText);
+  const comment = await commentService.createComment(postId, authorId, commentBody);
 
   res.status(201).json({
     status: "success",
@@ -56,8 +56,25 @@ async function deleteComment(req, res, next) {
   // });
 }
 
+async function editComment(req, res, next) {
+  const commentId = Number(req.params?.id); //commentId is checked in previous middleware
+
+  const { comment: commentBody } = req.body;
+
+  const editedComment = await commentService.updateComment(commentId, commentBody);
+  if (!editedComment) return next(new CustomError(404, `No comment found with id ${commentId}`));
+
+  res.status(200).json({
+    status: "success",
+    statusCode: 200,
+    message: "Comment successfully updated",
+    data: editedComment,
+  });
+}
+
 export default {
   createComment,
   getAllCommentsFromPost,
   deleteComment,
+  editComment,
 };

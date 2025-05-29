@@ -1,6 +1,6 @@
 import { Router } from "express";
-import registerUserValidator from "../validation/registerValidation.js";
-import loginUserValidator from "../validation/loginValidation.js";
+import registerUserValidator from "../validation/registerValidator.js";
+import loginUserValidator from "../validation/loginValidator.js";
 import authController from "../controllers/authController.js";
 import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 

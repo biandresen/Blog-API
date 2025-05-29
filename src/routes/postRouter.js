@@ -1,13 +1,13 @@
 import { Router } from "express";
 import postController from "../controllers/postController.js";
+import commentController from "../controllers/commentController.js";
 import asyncErrorHandler from "../utils/asyncErrorHandler.js";
-import newPostValidator from "../validation/newPostValidation.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
-import updatePostValidator from "../validation/updatePostValidation.js";
 import isPostAuthorOrAdmin from "../middleware/isPostAuthorOrAdmin.js";
 import isAdmin from "../middleware/isAdmin.js";
-import newCommentValidator from "../validation/newCommentValidation.js";
-import commentController from "../controllers/commentController.js";
+import updatePostValidator from "../validation/updatePostValidator.js";
+import newPostValidator from "../validation/newPostValidator.js";
+import newCommentValidator from "../validation/newCommentValidator.js";
 
 const router = Router();
 

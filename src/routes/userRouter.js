@@ -3,9 +3,9 @@ import postController from "../controllers/postController.js";
 import userController from "../controllers/userController.js";
 import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
-import updateUserValidator from "../validation/updateUserValidation.js";
+import updateUserValidator from "../validation/updateUserValidator.js";
 import isAdmin from "../middleware/isAdmin.js";
-import changeRoleValidator from "../validation/changeRoleValidation.js";
+import changeRoleValidator from "../validation/changeRoleValidator.js";
 import isSelfOrAdmin from "../middleware/isSelfOrAdmin.js";
 
 const router = Router();

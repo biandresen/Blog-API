@@ -45,9 +45,19 @@ async function deleteComment(commentId) {
   });
 }
 
+async function updateComment(commentId, body) {
+  return await prisma.comment.update({
+    where: { id: commentId },
+    data: {
+      body,
+    },
+  });
+}
+
 export default {
   createComment,
   getAllCommentsFromPost,
   getCommentById,
   deleteComment,
+  updateComment,
 };
