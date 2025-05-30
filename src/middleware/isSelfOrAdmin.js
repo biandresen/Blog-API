@@ -11,7 +11,12 @@ function isSelfOrAdmin(req, res, next) {
     return next();
   }
 
-  return next(new CustomError(403, "Not authorized"));
+  return next(
+    new CustomError(
+      403,
+      "Forbidden: Only admins or the user of this profile are allowed to perform this action"
+    )
+  );
 }
 
 export default isSelfOrAdmin;

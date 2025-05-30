@@ -1,3 +1,4 @@
+import { body } from "express-validator";
 import { ROLES } from "../constants.js";
 
 const updateUserRoleValidator = [

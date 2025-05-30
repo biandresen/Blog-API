@@ -1,24 +1,19 @@
-import { validationResult, matchedData } from "express-validator";
+import { matchedData } from "express-validator";
 import jwt from "jsonwebtoken";
 
 import { hashPassword, matchPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
 import CustomError from "../utils/CustomError.js";
 import authService from "../services/authService.js";
-import createUserPayload from "../utils/createUserPayload.js";
 import removePwFromUser from "../utils/removePwFromUser.js";
+import successResponse from "../utils/successResponse.js";
+import createTokenData from "../utils/createTokenData.js";
+import REFRESH_TOKEN_COOKIE_SETTINGS from "../utils/refreshTokenCookieSettings.js";
+import createTokens from "../utils/createTokens.js";
+import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
 
 async function registerUser(req, res, next) {
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    return next(new CustomError(400, "Validation failed", validationErrors.array()));
-  }
-
-  const data = matchedData(req);
-  if (!data.username || !data.email || !data.password) {
-    return next(new CustomError(400, "Required fields are missing"));
-  }
-  const { username, email, password } = data;
+  const { username, email, password } = matchedData(req);
 
   const hashedPassword = await hashPassword(password);
 
@@ -26,14 +21,7 @@ async function registerUser(req, res, next) {
 
   const userWithoutPassword = removePwFromUser(newUser);
 
-  res.status(201).json({
-    status: "success",
-    statusCode: 201,
-    message: "User created successfully",
-    data: {
-      user: userWithoutPassword,
-    },
-  });
+  successResponse(res, 201, "User created successfully", userWithoutPassword);
 }
 
 async function loginUser(req, res, next) {
@@ -51,53 +39,28 @@ async function loginUser(req, res, next) {
   const isMatch = await matchPassword(password, user.password);
   if (!isMatch) return next(new CustomError(401, "Invalid credentials"));
 
-  const tokenPayload = createUserPayload(user);
-  const accessToken = jwt.sign(tokenPayload, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
-  const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  const { accessToken, refreshToken } = createTokens(user);
 
-  const tokenData = {
-    token: refreshToken,
-    issuedAt: new Date(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    userAgent: req.get("User-Agent") || null,
-    ipAddress: req.ip || null,
-  };
+  const tokenData = createTokenData(req, refreshToken);
 
   await authService.storeRefreshToken(user.id, tokenData);
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "Login successful",
-    accessToken,
-  });
+  successResponse(res, 200, "Login successful", accessToken);
 }
 
 async function logoutUser(req, res, next) {
   const token = req.cookies?.refreshToken;
   if (token) {
     const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    if (!decodedUser) return next(new CustomError(400, "Invalid refresh token. Please login"));
     await authService.deleteRefreshToken(decodedUser.id, token);
   }
 
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-  });
+  res.clearCookie("refreshToken", CLEAR_COOKIE_SETTINGS);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "Logged out successfully",
-  });
+  successResponse(res, 200, "Logged out successfully");
 }
 
 async function refreshAccessToken(req, res, next) {
@@ -110,33 +73,15 @@ async function refreshAccessToken(req, res, next) {
   const isValid = await authService.getRefreshToken(decodedUser.id, token);
   if (!isValid) return next(new CustomError(400, "Invalid refresh token. Please login"));
 
-  const tokenPayload = createUserPayload(decodedUser);
-  const accessToken = jwt.sign(tokenPayload, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
-  const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  const { accessToken, refreshToken } = createTokens(decodedUser);
 
-  const tokenData = {
-    token: refreshToken,
-    issuedAt: new Date(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    userAgent: req.get("User-Agent") || null,
-    ipAddress: req.ip || null,
-  };
+  const tokenData = createTokenData(req, refreshToken);
 
   await authService.storeRefreshToken(decodedUser.id, tokenData);
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "New access token provided",
-    accessToken,
-  });
+  successResponse(res, 200, "New access token provided", accessToken);
 }
 
 export default {

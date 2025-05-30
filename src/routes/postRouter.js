@@ -9,14 +9,26 @@ import updatePostValidator from "../validation/updatePostValidator.js";
 import newPostValidator from "../validation/newPostValidator.js";
 import newCommentValidator from "../validation/newCommentValidator.js";
 import searchParametersValidator from "../validation/searchParametersValidator.js";
+import queryParametersValidator from "../validation/queryParametersValidator.js";
 
 const router = Router();
 
-router.get("/search", searchParametersValidator, asyncErrorHandler(postController.searchPosts));
+router.get(
+  "/search",
+  searchParametersValidator,
+  queryParametersValidator,
+  asyncErrorHandler(postController.searchPosts)
+);
 router.get("/drafts", isAuthenticated, asyncErrorHandler(postController.getAllDraftsForCurrentUser));
-router.get("/drafts/all", isAuthenticated, isAdmin, asyncErrorHandler(postController.getAllDrafts));
+router.get(
+  "/drafts/all",
+  isAuthenticated,
+  isAdmin,
+  queryParametersValidator,
+  asyncErrorHandler(postController.getAllDrafts)
+);
 router.get("/:id", asyncErrorHandler(postController.getPost));
-router.get("/", asyncErrorHandler(postController.getAllPosts));
+router.get("/", queryParametersValidator, asyncErrorHandler(postController.getAllPosts));
 router.patch(
   "/:id/publish",
   isAuthenticated,
@@ -36,7 +48,11 @@ router.post(
   newCommentValidator,
   asyncErrorHandler(commentController.createComment)
 );
-router.get("/:id/comments", asyncErrorHandler(commentController.getAllCommentsFromPost));
+router.get(
+  "/:id/comments",
+  queryParametersValidator,
+  asyncErrorHandler(commentController.getAllCommentsFromPost)
+);
 router.post("/", isAuthenticated, newPostValidator, asyncErrorHandler(postController.createPost));
 router.delete("/:id", isAuthenticated, isPostAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 

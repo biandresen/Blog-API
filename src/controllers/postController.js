@@ -1,10 +1,17 @@
 import { matchedData, validationResult } from "express-validator";
 import postService from "../services/postService.js";
 import CustomError from "../utils/CustomError.js";
+import normalizeTags from "../utils/normalizeTags.js";
 
 async function getAllPosts(req, res, next) {
-  const queryParams = req.query;
+  //*TODO DRY
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty())
+    return next(new CustomError(400, "Validation error", validationErrors.array()));
 
+  const queryParams = matchedData(req);
+
+  //*TODO DRY
   // Normalize tags if present
   if (queryParams.tag) {
     queryParams.tag =
@@ -25,11 +32,17 @@ async function getAllPosts(req, res, next) {
 }
 
 async function getAllPostsFromUser(req, res, next) {
+  //*TODO DRY
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty())
+    return next(new CustomError(400, "Validation error", validationErrors.array()));
+
   const userId = Number(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
-  const queryParams = req.query;
+  const queryParams = matchedData(req);
 
+  //*TODO DRY
   // Normalize tags if present
   if (queryParams.tag) {
     queryParams.tag =
@@ -38,7 +51,7 @@ async function getAllPostsFromUser(req, res, next) {
       : queryParams.tag.split(",").map((t) => t.trim().toLowerCase());
   }
 
-  const posts = await postService.getAllPostsByAuthor(userId, queryParams);
+  const posts = await postService.getAllPostsByAuthor(userId, queryParams); //Only getting published posts by default
 
   res.status(200).json({
     status: "success",
@@ -65,14 +78,16 @@ async function getPost(req, res, next) {
 }
 
 async function createPost(req, res, next) {
+  //*TODO DRY
   const validationErrors = validationResult(req);
   if (!validationErrors.isEmpty()) {
     return next(new CustomError(400, "Validation failed", validationErrors.array()));
   }
 
   const { title, body, published, tags } = matchedData(req);
-  const authorId = req.user?.id; //authorId is checked in previous middleware
+  const authorId = Number(req.user?.id); //authorId is checked in previous middleware
 
+  //*TODO DRY
   const normalizedTags = tags.map((tag) => tag.toLowerCase());
 
   const createdPost = await postService.createPost(authorId, title, body, published, normalizedTags);
@@ -86,6 +101,7 @@ async function createPost(req, res, next) {
 }
 
 async function updatePost(req, res, next) {
+  //*TODO DRY
   const validationErrors = validationResult(req);
   if (!validationErrors.isEmpty()) {
     return next(new CustomError(400, "Validation failed", validationErrors.array()));
@@ -95,6 +111,7 @@ async function updatePost(req, res, next) {
 
   const { title, body, published, tags } = matchedData(req);
 
+  //*TODO DRY
   const normalizedTags = tags ? tags.map((tag) => tag.toLowerCase()) : undefined;
 
   const updatedPost = await postService.updatePost(postId, {
@@ -118,13 +135,12 @@ async function deletePost(req, res, next) {
   const deletedPost = await postService.deletePost(postId);
   if (!deletedPost) return next(new CustomError(404, `No post found with id ${postId}`));
 
-  res.status(204).send();
-  // .json({
-  //   status: "success",
-  //   statusCode: 204,
-  //   message: "Post successfully deleted",
-  //   data: null,
-  // });
+  res.status(200).json({
+    status: "success",
+    statusCode: 204,
+    message: "Post successfully deleted",
+    data: null,
+  });
 }
 
 async function getAllDraftsForCurrentUser(req, res, next) {
@@ -133,6 +149,7 @@ async function getAllDraftsForCurrentUser(req, res, next) {
 
   const queryParams = req.query;
 
+  //*TODO DRY
   // Normalize tags if present
   if (queryParams.tag) {
     queryParams.tag =
@@ -155,8 +172,14 @@ async function getAllDraftsForCurrentUser(req, res, next) {
 }
 
 async function getAllDrafts(req, res, next) {
-  const queryParams = req.query;
+  //*TODO DRY
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty())
+    return next(new CustomError(400, "Validation error", validationErrors.array()));
 
+  const queryParams = matchedData(req);
+
+  //*TODO DRY
   // Normalize tags if present
   if (queryParams.tag) {
     queryParams.tag =
@@ -191,6 +214,7 @@ async function publishDraft(req, res, next) {
 }
 
 async function searchPosts(req, res, next) {
+  //*TODO DRY
   const validationErrors = validationResult(req);
   if (!validationErrors.isEmpty())
     return next(new CustomError(400, "Validation failed", validationErrors.array()));

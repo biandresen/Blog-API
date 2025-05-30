@@ -5,7 +5,6 @@ const updateUserValidator = [
   body("username")
     .optional()
     .trim()
-    .escape()
     .isLength({ min: 3, max: 16 })
     .withMessage("Username must be between 3 and 16 characters")
     .custom(async (value, { req }) => {
@@ -19,7 +18,6 @@ const updateUserValidator = [
   body("email")
     .optional()
     .trim()
-    .escape()
     .isEmail()
     .withMessage("Not a valid email address")
     .isLength({ min: 5, max: 32 })
@@ -37,7 +35,7 @@ const updateUserValidator = [
     .isStrongPassword()
     .withMessage("Password must include at least 1 lowercase, 1 uppercase, 1 number, and 1 symbol"),
 
-  body("avatar").optional().escape(),
+  body("avatar").optional(),
 ];
 
 export default updateUserValidator;

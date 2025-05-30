@@ -15,7 +15,9 @@ async function isAuthorOrAdmin(req, res, next) {
   if (role === ROLES.ADMIN_ROLE || post.authorId === userId) {
     return next();
   }
-  return next(new CustomError(403, "Not authorized"));
+  return next(
+    new CustomError(403, "Forbidden: Only admins or post author are allowed to perform this action")
+  );
 }
 
 export default isAuthorOrAdmin;

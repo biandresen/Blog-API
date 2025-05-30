@@ -5,7 +5,6 @@ const changeRoleValidator = [
   body("role")
     .exists()
     .withMessage("Role is required")
-    .escape()
     .isIn(Object.values(ROLES))
     .withMessage(`Role must be one of: ${Object.values(ROLES).join(", ")}`),
 ];

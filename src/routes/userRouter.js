@@ -7,6 +7,7 @@ import updateUserValidator from "../validation/updateUserValidator.js";
 import isAdmin from "../middleware/isAdmin.js";
 import changeRoleValidator from "../validation/changeRoleValidator.js";
 import isSelfOrAdmin from "../middleware/isSelfOrAdmin.js";
+import queryParametersValidator from "../validation/queryParametersValidator.js";
 
 const router = Router();
 
@@ -27,6 +28,6 @@ router.patch(
 );
 router.patch("/:id/reactivate", isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
 router.delete("/:id", isAuthenticated, isSelfOrAdmin, asyncErrorHandler(userController.deleteUser));
-router.get("/:id/posts", asyncErrorHandler(postController.getAllPostsFromUser));
+router.get("/:id/posts", queryParametersValidator, asyncErrorHandler(postController.getAllPostsFromUser));
 
 export default router;

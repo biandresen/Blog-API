@@ -5,7 +5,6 @@ const loginValidator = [
     .notEmpty()
     .withMessage("Username or email is required")
     .trim()
-    .escape()
     .isLength({ min: 3, max: 100 })
     .withMessage("Must be a valid username or email"),
 

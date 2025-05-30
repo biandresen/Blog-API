@@ -4,11 +4,12 @@ import tagController from "../controllers/tagController.js";
 import newTagValidator from "../validation/newTagValidator.js";
 import isAuthenticated from "../middleware/isAuthenticated.js";
 import isAdmin from "../middleware/isAdmin.js";
+import queryParametersValidator from "../validation/queryParametersValidator.js";
 
 const router = Router();
 
 router.get("/popular", asyncErrorHandler(tagController.getPopularTags));
-router.get("/", asyncErrorHandler(tagController.getAllTags));
+router.get("/", queryParametersValidator, asyncErrorHandler(tagController.getAllTags));
 router.get("/:id", asyncErrorHandler(tagController.getTagById));
 router.patch("/:id", isAuthenticated, isAdmin, newTagValidator, asyncErrorHandler(tagController.editTag));
 router.delete("/:id", isAuthenticated, isAdmin, asyncErrorHandler(tagController.deleteTag));

@@ -1,16 +1,21 @@
-import { matchedData } from "express-validator";
+import { matchedData, validationResult } from "express-validator";
 import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
 import postService from "../services/postService.js";
 
 async function createComment(req, res, next) {
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
   const postId = Number(req.params?.id);
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
   const post = await postService.getPostById(postId);
   if (!post) return next(new CustomError(404, "Post not found"));
 
-  const authorId = req.user?.id;
+  const authorId = Number(req.user?.id);
 
   const { comment: commentBody } = matchedData(req);
 
@@ -25,10 +30,16 @@ async function createComment(req, res, next) {
 }
 
 async function getAllCommentsFromPost(req, res, next) {
+  //*TODO Consider setting checking validationErrors in middleware
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
   const postId = Number(req.params?.id);
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
-  const queryParams = req.query;
+  const queryParams = matchedData(req);
 
   const comments = await commentService.getAllCommentsFromPost(postId, queryParams);
 
@@ -47,19 +58,24 @@ async function deleteComment(req, res, next) {
   const deletedComment = await commentService.deleteComment(commentId);
   if (!deletedComment) return next(new CustomError(404, `No post found with id ${commentId}`));
 
-  res.status(204).send();
-  // .json({
-  //   status: "success",
-  //   statusCode: 204,
-  //   message: "Post successfully deleted",
-  //   data: null,
-  // });
+  res.status(200).json({
+    status: "success",
+    statusCode: 204,
+    message: "Post successfully deleted",
+    data: null,
+  });
 }
 
 async function editComment(req, res, next) {
+  //*TODO Consider setting checking validationErrors in middleware
+  const validationErrors = validationResult(req);
+  if (!validationErrors.isEmpty()) {
+    return next(new CustomError(400, "Validation failed", validationErrors.array()));
+  }
+
   const commentId = Number(req.params?.id); //commentId is checked in previous middleware
 
-  const { comment: commentBody } = req.body;
+  const { comment: commentBody } = matchedData(req);
 
   const editedComment = await commentService.updateComment(commentId, commentBody);
   if (!editedComment) return next(new CustomError(404, `No comment found with id ${commentId}`));

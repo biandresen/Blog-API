@@ -12,7 +12,6 @@ import cookieParser from "cookie-parser";
 import CustomError from "./utils/CustomError.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import routes from "./routes/index.js";
-import isAuthenticated from "./middleware/isAuthenticated.js";
 
 const app = express();
 

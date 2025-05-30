@@ -16,7 +16,9 @@ async function isCommentAuthorOrAdmin(req, res, next) {
     return next();
   }
 
-  return next(new CustomError(403, "Not authorized to delete this comment"));
+  return next(
+    new CustomError(403, "Forbidden: Only admins or comment author are allowed to perform this action")
+  );
 }
 
 export default isCommentAuthorOrAdmin;

@@ -1,7 +1,22 @@
 function globalErrorHandler(err, req, res, next) {
-  const statusCode = err.statusCode || 500;
-  const status = err.status || "error";
-  const message = err.message || "Something went wrong.";
+  let statusCode = err.statusCode || 500;
+  let status = err.status || "error";
+  let message = err.message || "Something went wrong.";
+
+  // Handle Prisma errors centrally
+  // if (err.code === "P2002") {
+  //   return res.status(400).json({ message: "Duplicate field value entered" });
+  // }
+
+  // Handle JWT errors centrally
+  if (err.name === "JsonWebTokenError") {
+    statusCode = 400;
+    message = "Invalid token. Please login again.";
+  }
+  if (err.name === "TokenExpiredError") {
+    statusCode = 401;
+    message = "Your session has expired. Please login again.";
+  }
 
   if (process.env.NODE_ENV === "development") {
     return res.status(statusCode).json({
