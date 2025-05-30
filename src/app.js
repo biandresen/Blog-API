@@ -12,6 +12,7 @@ import cookieParser from "cookie-parser";
 import CustomError from "./utils/CustomError.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import routes from "./routes/index.js";
+import { CORS_ORIGINS } from "./constants.js";
 
 const app = express();
 
@@ -46,7 +47,7 @@ app.use(hpp()); // Prevent HTTP parameter pollution
 // CORS
 app.use(
   cors({
-    origin: ["https://yourfrontend.com", "http://localhost:3000"],
+    origin: CORS_ORIGINS,
     credentials: true,
   })
 );

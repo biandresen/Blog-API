@@ -5,6 +5,7 @@ import removePwFromUser from "../utils/removePwFromUser.js";
 import CustomError from "../utils/CustomError.js";
 import { ROLES } from "../constants.js";
 import ensureAllowedFields from "../utils/ensureAllowedFields.js";
+import successResponse from "../utils/successResponse.js";
 
 async function getUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);
