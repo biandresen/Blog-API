@@ -10,8 +10,10 @@
  */
 
 function successResponse(res, statusCode, message, data = null, count = null) {
+  const status = `${statusCode}`.startsWith("2") ? "success" : "fail";
+
   const response = {
-    status: "success",
+    status,
     statusCode,
     message,
     data,

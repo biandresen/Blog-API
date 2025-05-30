@@ -7,13 +7,11 @@ async function getAllTags(req, res, next) {
 
   const tags = await tagService.getAllTags(queryParams);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    count: tags.length,
-    message: tags.length > 0 ? "Tags retrieved successfully" : "No tags found",
-    data: tags.length > 0 ? tags : [],
-  });
+  const message = tags.length > 0 ? "Tags retrieved successfully" : "No tags found";
+  const data = tags.length > 0 ? tags : [];
+  const count = tags.length;
+
+  successResponse(res, 200, message, data, count);
 }
 
 async function getTagById(req, res, next) {
@@ -23,38 +21,18 @@ async function getTagById(req, res, next) {
   const tag = await tagService.getTagById(tagId);
   if (!tag) return next(new CustomError(400, `No tag found with id ${tagId}`));
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "Tag retrieved successfully",
-    data: tag,
-  });
+  successResponse(res, 200, "Tag retrieved successfully", tag);
 }
 
 async function createTag(req, res, next) {
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    return next(new CustomError(400, "Validation failed", validationErrors.array()));
-  }
-
   const { tag: tagName } = matchedData(req);
 
   const createdTag = await tagService.createTag(tagName);
 
-  res.status(201).json({
-    status: "success",
-    statusCode: 201,
-    message: "Tag created successfully",
-    data: createdTag,
-  });
+  successResponse(res, 201, "Tag created successfully", createdTag);
 }
 
 async function editTag(req, res, next) {
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    return next(new CustomError(400, "Validation failed", validationErrors.array()));
-  }
-
   const tagId = Number(req.params.id);
   if (!tagId) return next(new CustomError(400, "Invalid tag id given"));
 
@@ -62,12 +40,7 @@ async function editTag(req, res, next) {
 
   const editedTag = await tagService.updateTag(tagId, tagName);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "Tag edited successfully",
-    data: editedTag,
-  });
+  successResponse(res, 200, "Tag edited successfully", editedTag);
 }
 
 async function deleteTag(req, res, next) {
@@ -77,13 +50,7 @@ async function deleteTag(req, res, next) {
   const deletedTag = await tagService.deleteTag(tagId);
   if (!deletedTag) return next(new CustomError(404, `No tag found with id ${tagId}`));
 
-  res.status(204).send();
-  // .json({
-  //   status: "success",
-  //   statusCode: 200,
-  //   message: "Tag deleted successfully",
-  //   data: null,
-  // });
+  successResponse(res, 200, "Tag deleted successfully", null);
 }
 
 async function getPopularTags(req, res, next) {
@@ -92,13 +59,11 @@ async function getPopularTags(req, res, next) {
 
   const tags = await tagService.getPopularTags(limit);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    count: tags.length,
-    message: tags.length > 0 ? "Tags retrieved successfully" : "No tags found",
-    data: tags.length > 0 ? tags : [],
-  });
+  const message = tags.length > 0 ? "Tags retrieved successfully" : "No tags found";
+  const data = tags.length > 0 ? tags : [];
+  const count = tags.length;
+
+  successResponse(res, 200, message, data, count);
 }
 
 export default {

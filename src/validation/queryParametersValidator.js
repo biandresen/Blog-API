@@ -13,6 +13,7 @@ const queryParametersValidator = [
     .toInt(),
 
   query("sort").optional().trim().isIn(["asc", "desc"]).withMessage("sort must be 'asc' or 'desc'"),
+  query("tag").optional().trim().isString().withMessage("tags must be strings seperated by ',' or '+"),
 ];
 
 export default queryParametersValidator;

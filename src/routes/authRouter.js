@@ -13,8 +13,11 @@ router.post(
   checkValidation,
   asyncErrorHandler(authController.registerUser)
 );
+
 router.post("/login", loginUserValidator, checkValidation, asyncErrorHandler(authController.loginUser));
+
 router.post("/logout", asyncErrorHandler(authController.logoutUser));
+
 router.post("/refresh", asyncErrorHandler(authController.refreshAccessToken));
 
 export default router;

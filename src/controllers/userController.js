@@ -22,20 +22,10 @@ async function getUserProfile(req, res, next) {
 
   const userWithoutPassword = removePwFromUser(requestedUser);
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "User retrieved successfully",
-    data: userWithoutPassword,
-  });
+  successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
 }
 
 async function updateUserProfile(req, res, next) {
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    return next(new CustomError(400, "Validation failed", validationErrors.array()));
-  }
-
   const userId = parseInt(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
@@ -58,20 +48,10 @@ async function updateUserProfile(req, res, next) {
 
   const userWithoutPassword = removePwFromUser(updatedUser);
 
-  res.status(201).json({
-    status: "success",
-    statusCode: 201,
-    message: "User updated successfully",
-    data: userWithoutPassword,
-  });
+  successResponse(res, 201, "User updated successfully", userWithoutPassword);
 }
 
 async function changeUserRole(req, res, next) {
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    return next(new CustomError(400, "Validation failed", validationErrors.array()));
-  }
-
   const userId = parseInt(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
@@ -84,12 +64,7 @@ async function changeUserRole(req, res, next) {
 
   const userWithoutPassword = removePwFromUser(updatedUser);
 
-  res.status(201).json({
-    status: "success",
-    statusCode: 201,
-    message: "User role updated successfully",
-    data: userWithoutPassword,
-  });
+  successResponse(res, 200, "User role updated successfully", userWithoutPassword);
 }
 
 async function deleteUser(req, res, next) {
@@ -99,12 +74,9 @@ async function deleteUser(req, res, next) {
   const deletedUser = await userService.deleteUser(userId);
   if (!deletedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "User account successfully marked as inactive (soft-delete)",
-    data: { id: userId, active: false },
-  });
+  const data = { id: userId, active: false };
+
+  successResponse(res, 200, "User account successfully marked as inactive (soft-delete)", data);
 }
 
 async function reactivateUser(req, res, next) {
@@ -114,12 +86,9 @@ async function reactivateUser(req, res, next) {
   const reactivatedUser = await userService.reactivateUser(userId);
   if (!reactivatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
-  res.status(200).json({
-    status: "success",
-    statusCode: 200,
-    message: "User account successfully reactivated",
-    data: { id: userId, active: true },
-  });
+  const data = { id: userId, active: false };
+
+  successResponse(res, 200, "User account successfully reactivated", data);
 }
 
 export default {
