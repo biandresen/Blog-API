@@ -9,9 +9,22 @@ import checkValidation from "../middleware/checkValidation.js";
 
 const router = Router();
 
-router.get("/popular", asyncErrorHandler(tagController.getPopularTags));
+router.get(
+  "/popular",
+  queryParametersValidator,
+  checkValidation,
+  asyncErrorHandler(tagController.getPopularTags)
+);
 
-router.get("/", queryParametersValidator, asyncErrorHandler(tagController.getAllTags));
+router.get("/", queryParametersValidator, checkValidation, asyncErrorHandler(tagController.getAllTags));
+
+router.post(
+  "/",
+  isAuthenticated,
+  newTagValidator,
+  checkValidation,
+  asyncErrorHandler(tagController.createTag)
+);
 
 router.get("/:id", asyncErrorHandler(tagController.getTagById));
 
@@ -25,13 +38,5 @@ router.patch(
 );
 
 router.delete("/:id", isAuthenticated, isAdmin, asyncErrorHandler(tagController.deleteTag));
-
-router.post(
-  "/",
-  isAuthenticated,
-  newTagValidator,
-  checkValidation,
-  asyncErrorHandler(tagController.createTag)
-);
 
 export default router;

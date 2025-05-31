@@ -10,7 +10,7 @@ async function isCommentAuthorOrAdmin(req, res, next) {
   if (isNaN(commentId)) return next(new CustomError(400, "Invalid comment id given"));
 
   const comment = await commentService.getCommentById(commentId);
-  if (!comment) return next(new CustomError(404, "Comment not found"));
+  if (!comment) return next(new CustomError(404, `No comment found with id ${commentId}`));
 
   if (role === ROLES.ADMIN_ROLE || comment.authorId === userId) {
     return next();

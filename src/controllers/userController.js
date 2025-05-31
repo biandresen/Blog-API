@@ -1,4 +1,4 @@
-import { matchedData, validationResult } from "express-validator";
+import { matchedData } from "express-validator";
 import { hashPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
 import removePwFromUser from "../utils/removePwFromUser.js";
@@ -19,7 +19,7 @@ async function getUserProfile(req, res, next) {
   if (!isAdmin && !isSelf) return next(new CustomError(403, "Forbidden. Please login."));
 
   const requestedUser = await userService.getUserById(userId);
-  if (!requestedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+  // if (!requestedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
   const userWithoutPassword = removePwFromUser(requestedUser);
 
@@ -45,11 +45,11 @@ async function updateUserProfile(req, res, next) {
   const fieldsToUpdate = ensureAllowedFields(userUpdateData, [("username", "email", "password", "avatar")]);
 
   const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
-  if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+  // if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
   const userWithoutPassword = removePwFromUser(updatedUser);
 
-  successResponse(res, 201, "User updated successfully", userWithoutPassword);
+  successResponse(res, 200, "User updated successfully", userWithoutPassword);
 }
 
 async function changeUserRole(req, res, next) {
@@ -61,7 +61,7 @@ async function changeUserRole(req, res, next) {
   const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["role"]);
 
   const updatedUser = await userService.changeRole(userId, fieldsToUpdate);
-  if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+  // if (!updatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
   const userWithoutPassword = removePwFromUser(updatedUser);
 
@@ -73,7 +73,7 @@ async function deleteUser(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
   const deletedUser = await userService.deleteUser(userId);
-  if (!deletedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+  // if (!deletedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
   const data = { id: userId, active: false };
 
@@ -85,9 +85,9 @@ async function reactivateUser(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
   const reactivatedUser = await userService.reactivateUser(userId);
-  if (!reactivatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
+  // if (!reactivatedUser) return next(new CustomError(404, `No user found with id ${userId}`));
 
-  const data = { id: userId, active: false };
+  const data = { id: userId, active: reactivatedUser.active };
 
   successResponse(res, 200, "User account successfully reactivated", data);
 }

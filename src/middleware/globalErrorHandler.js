@@ -4,9 +4,13 @@ function globalErrorHandler(err, req, res, next) {
   let message = err.message || "Something went wrong.";
 
   // Handle Prisma errors centrally
-  // if (err.code === "P2002") {
-  //   return res.status(400).json({ message: "Duplicate field value entered" });
-  // }
+  if (err.code === "P2025") {
+    return res.status(404).json({
+      status: "fail",
+      statusCode: 404,
+      message: "No resource found with the ID given",
+    });
+  }
 
   // Handle JWT errors centrally
   if (err.name === "JsonWebTokenError") {

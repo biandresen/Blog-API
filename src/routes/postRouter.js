@@ -22,7 +22,13 @@ router.get(
   asyncErrorHandler(postController.searchPosts)
 );
 
-router.get("/drafts", isAuthenticated, asyncErrorHandler(postController.getAllDraftsForCurrentUser));
+router.get(
+  "/drafts",
+  isAuthenticated,
+  queryParametersValidator,
+  checkValidation,
+  asyncErrorHandler(postController.getAllDraftsFromCurrentUser)
+);
 
 router.get(
   "/drafts/all",

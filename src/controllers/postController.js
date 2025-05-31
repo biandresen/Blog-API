@@ -1,4 +1,4 @@
-import { matchedData, validationResult } from "express-validator";
+import { matchedData } from "express-validator";
 import postService from "../services/postService.js";
 import CustomError from "../utils/CustomError.js";
 import normalizeTags from "../utils/normalizeTags.js";
@@ -40,7 +40,7 @@ async function getPost(req, res, next) {
   if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
   const post = await postService.getPostById(postId);
-  if (!post) return next(new CustomError(404, `No post found with id ${postId}`));
+  // if (!post) return next(new CustomError(404, `No post found with id ${postId}`));
 
   successResponse(res, 200, "Post retrieved successfully", post);
 }
@@ -79,12 +79,12 @@ async function deletePost(req, res, next) {
   const postId = Number(req.params?.id); //postId is checked in previous middleware
 
   const deletedPost = await postService.deletePost(postId);
-  if (!deletedPost) return next(new CustomError(404, `No post found with id ${postId}`));
+  // if (!deletedPost) return next(new CustomError(404, `No post found with id ${postId}`));
 
   successResponse(res, 200, "Post successfully deleted");
 }
 
-async function getAllDraftsForCurrentUser(req, res, next) {
+async function getAllDraftsFromCurrentUser(req, res, next) {
   const userId = Number(req.user?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
 
@@ -121,7 +121,7 @@ async function publishDraft(req, res, next) {
   const postId = Number(req.params?.id); //postId is checked in previous middleware
 
   const publishedDraft = await postService.publishDraft(postId);
-  if (!publishedDraft) return next(new CustomError(404, `No post found with id ${postId}`));
+  // if (!publishedDraft) return next(new CustomError(404, `No post found with id ${postId}`));
 
   successResponse(res, 200, "Draft successfully published", publishedDraft);
 }
@@ -157,7 +157,7 @@ export default {
   createPost,
   updatePost,
   deletePost,
-  getAllDraftsForCurrentUser,
+  getAllDraftsFromCurrentUser,
   getAllDrafts,
   publishDraft,
   searchPosts,

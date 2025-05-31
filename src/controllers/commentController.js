@@ -1,4 +1,4 @@
-import { matchedData, validationResult } from "express-validator";
+import { matchedData } from "express-validator";
 import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
 import postService from "../services/postService.js";
@@ -9,7 +9,7 @@ async function createComment(req, res, next) {
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
   const post = await postService.getPostById(postId);
-  if (!post) return next(new CustomError(404, "Post not found"));
+  // if (!post) return next(new CustomError(404, `No post found with id ${postId}`));
 
   const authorId = Number(req.user?.id);
 
@@ -39,9 +39,9 @@ async function deleteComment(req, res, next) {
   const commentId = Number(req.params?.id); //commentId is checked in previous middleware
 
   const deletedComment = await commentService.deleteComment(commentId);
-  if (!deletedComment) return next(new CustomError(404, `No post found with id ${commentId}`));
+  // if (!deletedComment) return next(new CustomError(404, `No comment found with id ${commentId}`));
 
-  successResponse(res, 200, "Post successfully deleted");
+  successResponse(res, 200, "Comment successfully deleted");
 }
 
 async function editComment(req, res, next) {
@@ -50,7 +50,7 @@ async function editComment(req, res, next) {
   const { comment: commentBody } = matchedData(req);
 
   const editedComment = await commentService.updateComment(commentId, commentBody);
-  if (!editedComment) return next(new CustomError(404, `No comment found with id ${commentId}`));
+  // if (!editedComment) return next(new CustomError(404, `No comment found with id ${commentId}`));
 
   successResponse(res, 200, "Comment successfully updated", editedComment);
 }
