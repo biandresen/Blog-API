@@ -20,7 +20,6 @@ async function getTagById(req, res, next) {
   if (!tagId) return next(new CustomError(400, "Invalid tag id given"));
 
   const tag = await tagService.getTagById(tagId);
-  // if (!tag) return next(new CustomError(404, `No tag found with id ${tagId}`));
 
   successResponse(res, 200, "Tag retrieved successfully", tag);
 }
@@ -40,7 +39,6 @@ async function editTag(req, res, next) {
   const { tag: tagName } = matchedData(req);
 
   const editedTag = await tagService.updateTag(tagId, tagName);
-  // if (!editedTag) return next(new CustomError(404, `No tag found with id ${tagId}`));
 
   successResponse(res, 200, "Tag edited successfully", editedTag);
 }
@@ -50,7 +48,6 @@ async function deleteTag(req, res, next) {
   if (isNaN(tagId)) return next(new CustomError(400, "Invalid tag id given"));
 
   const deletedTag = await tagService.deleteTag(tagId);
-  // if (!deletedTag) return next(new CustomError(404, `No tag found with id ${tagId}`));
 
   successResponse(res, 200, "Tag deleted successfully", null);
 }
