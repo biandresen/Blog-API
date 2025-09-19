@@ -41,10 +41,8 @@ async function updateUserProfile(req, res, next) {
     delete userUpdateData.password;
   }
 
-  const fieldsToUpdate = ensureAllowedFields(userUpdateData, [("username", "email", "password", "avatar")]);
-
+  const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["username", "email", "password", "avatar"]);
   const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
-
   const userWithoutPassword = removePwFromUser(updatedUser);
 
   successResponse(res, 200, "User updated successfully", userWithoutPassword);

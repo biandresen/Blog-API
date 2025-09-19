@@ -7,6 +7,8 @@
  */
 
 function ensureAllowedFields(userUpdateData, allowedFields) {
+  console.log(userUpdateData);
+  console.log(allowedFields);
   return Object.fromEntries(Object.entries(userUpdateData).filter(([key]) => allowedFields.includes(key)));
 }
 
