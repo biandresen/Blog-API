@@ -5,11 +5,26 @@ async function getUserById(id) {
 }
 
 async function getUserByUsername(username) {
-  return await prisma.user.findFirst({ where: { username, active: true } });
+  console.log(username);
+  return await prisma.user.findFirst({
+    where: {
+      username: {
+        equals: username,
+        mode: "insensitive",
+      },
+    },
+  });
 }
 
 async function getUserByEmail(email) {
-  return await prisma.user.findFirst({ where: { email, active: true } });
+  return await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
+    },
+  });
 }
 
 async function createUser(username, email, password) {

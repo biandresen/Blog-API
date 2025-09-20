@@ -25,6 +25,29 @@ async function getUserProfile(req, res, next) {
   successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
 }
 
+async function getUserProfileByNameOrEmail(req, res, next) {
+  const currentUser = req.user;
+  if (!currentUser) return next(new CustomError(401, "Unauthorized. Please login."));
+
+  const isAdmin = currentUser?.role === ROLES.ADMIN_ROLE;
+  if (!isAdmin) return next(new CustomError(403, "Forbidden"));
+
+  const userInput = req.params?.userInput.toLowerCase();
+
+  let requestedUser;
+  if (userInput.includes("@")) {
+    requestedUser = await userService.getUserByEmail(userInput);
+  } else {
+    requestedUser = await userService.getUserByUsername(userInput);
+  }
+
+  if (!requestedUser) return next(new CustomError(404, "User not found"));
+
+  const userWithoutPassword = removePwFromUser(requestedUser);
+
+  successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
+}
+
 async function updateUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
@@ -33,14 +56,14 @@ async function updateUserProfile(req, res, next) {
   if (!currentUser) return next(new CustomError(401, "Unauthorized. Please login."));
 
   const userUpdateData = matchedData(req);
-
+  console.log(userUpdateData);
   if (userUpdateData.password) {
     userUpdateData.password = await hashPassword(userUpdateData.password);
   } else {
     // remove password to prevent accidental overwrite with undefined/null
     delete userUpdateData.password;
   }
-
+  console.log(userUpdateData);
   const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["username", "email", "password", "avatar"]);
   const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
   const userWithoutPassword = removePwFromUser(updatedUser);
@@ -87,6 +110,7 @@ async function reactivateUser(req, res, next) {
 
 export default {
   getUserProfile,
+  getUserProfileByNameOrEmail,
   updateUserProfile,
   changeUserRole,
   reactivateUser,

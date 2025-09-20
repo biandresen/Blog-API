@@ -13,6 +13,11 @@ import checkValidation from "../middleware/checkValidation.js";
 const router = Router();
 
 router.get("/:id", isAuthenticated, asyncErrorHandler(userController.getUserProfile));
+router.get(
+  "/input/:userInput",
+  isAuthenticated,
+  asyncErrorHandler(userController.getUserProfileByNameOrEmail)
+);
 
 router.patch(
   "/:id",
