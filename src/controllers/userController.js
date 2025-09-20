@@ -92,7 +92,7 @@ async function deleteUser(req, res, next) {
 
   const deletedUser = await userService.deleteUser(userId);
 
-  const data = { id: userId, active: false };
+  const data = { id: userId, username: deletedUser.username, active: false };
 
   successResponse(res, 200, "User account successfully marked as inactive (soft-delete)", data);
 }
@@ -103,7 +103,7 @@ async function reactivateUser(req, res, next) {
 
   const reactivatedUser = await userService.reactivateUser(userId);
 
-  const data = { id: userId, active: reactivatedUser.active };
+  const data = { id: userId, username: reactivatedUser.username, active: reactivatedUser.active };
 
   successResponse(res, 200, "User account successfully reactivated", data);
 }
