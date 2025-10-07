@@ -25,11 +25,22 @@ async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } =
     take: parsedLimit,
     include: {
       tags: true,
-      comments: true,
+      comments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
+      },
       user: {
         select: {
           id: true,
           username: true,
+          avatar: true,
         },
       },
     },
