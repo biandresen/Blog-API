@@ -1,7 +1,7 @@
 import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
 
-async function isCommentAuthorOrAdmin(req, res, next) {
+async function isCommentAuthor(req, res, next) {
   const userId = req.user?.id;
   const commentId = Number(req.params?.id);
 
