@@ -1,6 +1,6 @@
 import prisma from "../config/prismaClient.js";
 
-async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } = {}) {
+async function getAllPosts({ page = 1, limit = 10, sort = "asc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
   const parsedLimit = parseInt(limit) || 10;
   const skip = (parsedPage - 1) * parsedLimit;
@@ -26,6 +26,9 @@ async function getAllPosts({ page = 1, limit = 10, sort = "desc", tag = null } =
     include: {
       tags: true,
       comments: {
+        orderBy: {
+          createdAt: "asc",
+        },
         include: {
           user: {
             select: {

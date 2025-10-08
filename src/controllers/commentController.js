@@ -1,7 +1,6 @@
 import { matchedData } from "express-validator";
 import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
-import postService from "../services/postService.js";
 import successResponse from "../utils/successResponse.js";
 
 async function createComment(req, res, next) {
@@ -12,8 +11,8 @@ async function createComment(req, res, next) {
 
   const { comment: commentBody } = matchedData(req);
 
+  console.log(postId, authorId);
   const comment = await commentService.createComment(postId, authorId, commentBody);
-
   successResponse(res, 201, "Comment created successfully", comment);
 }
 

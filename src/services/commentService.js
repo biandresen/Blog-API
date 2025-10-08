@@ -10,7 +10,7 @@ async function createComment(postId, authorId, body) {
   });
 }
 
-async function getAllCommentsFromPost(postId, { page = 1, limit = 10, sort = "desc" } = {}) {
+async function getAllCommentsFromPost(postId, { page = 1, limit = 10, sort = "asc" } = {}) {
   const parsedPage = parseInt(page) || 1;
   const parsedLimit = parseInt(limit) || 10;
   const skip = (parsedPage - 1) * parsedLimit;
