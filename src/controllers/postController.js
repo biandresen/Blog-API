@@ -41,6 +41,8 @@ async function getPost(req, res, next) {
 
   const post = await postService.getPostById(postId);
 
+  if (!post) successResponse(res, 404, "No post found", post);
+
   successResponse(res, 200, "Post retrieved successfully", post);
 }
 
