@@ -9,6 +9,7 @@ import changeRoleValidator from "../validation/changeRoleValidator.js";
 import isSelfOrAdmin from "../middleware/isSelfOrAdmin.js";
 import queryParametersValidator from "../validation/queryParametersValidator.js";
 import checkValidation from "../middleware/checkValidation.js";
+import uploadAvatar from "../middleware/uploadAvatar.js";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.patch(
   "/:id",
   isAuthenticated,
   isSelfOrAdmin,
+  uploadAvatar.single("avatar"),
   updateUserValidator,
   checkValidation,
   asyncErrorHandler(userController.updateUserProfile)

@@ -6,12 +6,12 @@ const newPostValidator = [
   body("body").notEmpty().withMessage("Body cannot be empty").trim(),
 
   body("tags")
+    .optional()
     .isArray({ min: 0 })
     .withMessage("Tags must be an array")
-    .optional()
     .custom((tags) => {
       if (!Array.isArray(tags)) return false;
-      return tags.every((tag) => typeof tag === "string" && tag.trim().length > 0);
+      return tags.every((tag) => typeof tag === "string");
     })
     .withMessage("Tags must be an array of non-empty strings"),
 

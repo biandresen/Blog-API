@@ -35,7 +35,7 @@ const updateUserValidator = [
     .isStrongPassword()
     .withMessage("Password must include at least 1 lowercase, 1 uppercase, 1 number, and 1 symbol"),
 
-  body("avatar").optional(),
+  body("avatar").optional().isString().withMessage("Avatar must be a valid string URL"),
 ];
 
 export default updateUserValidator;

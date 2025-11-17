@@ -34,6 +34,8 @@ async function loginUser(req, res, next) {
     user = await userService.getUserByUsername(userInput);
   }
 
+  if (!user.active) return next(new CustomError(403, "User is inactive"));
+
   if (!user) return next(new CustomError(401, "Invalid credentials"));
 
   const isMatch = await matchPassword(password, user.password);
@@ -64,6 +66,7 @@ async function logoutUser(req, res, next) {
 }
 
 async function refreshAccessToken(req, res, next) {
+  console.log("REFRESHED:", req.cookies);
   const token = req.cookies?.refreshToken;
   if (!token) return next(new CustomError(400, "No refresh token. Please login"));
 

@@ -56,16 +56,23 @@ async function updateUserProfile(req, res, next) {
   if (!currentUser) return next(new CustomError(401, "Unauthorized. Please login."));
 
   const userUpdateData = matchedData(req);
-  console.log(userUpdateData);
+
+  // Handle password
   if (userUpdateData.password) {
     userUpdateData.password = await hashPassword(userUpdateData.password);
   } else {
-    // remove password to prevent accidental overwrite with undefined/null
     delete userUpdateData.password;
   }
-  console.log(userUpdateData);
+
+  // Handle avatar upload
+  if (req.file) {
+    userUpdateData.avatar = `/uploads/avatars/${req.file.filename}`;
+  }
+  console.log("FILE:", req.file);
+
   const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["username", "email", "password", "avatar"]);
   const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
+
   const userWithoutPassword = removePwFromUser(updatedUser);
 
   successResponse(res, 200, "User updated successfully", userWithoutPassword);

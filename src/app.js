@@ -1,5 +1,5 @@
-// PACKAGE IMPORTS
 import express from "express";
+import path from "path";
 import compression from "compression";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -16,58 +16,101 @@ import { CORS_ORIGINS } from "./constants.js";
 
 const app = express();
 
-// app.set("trust proxy", true); //If behind a proxy (e.g., Vercel, Nginx)
+// ----------------------------
+// SECURITY HEADERS (API routes only)
+// ----------------------------
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // allow images from other origins
+  })
+);
 
-// SECURITY HEADERS
-app.use(helmet());
-
-// RATE LIMITING (set early to block excessive traffic ASAP)
+// ----------------------------
+// RATE LIMITING
+// ----------------------------
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per window
-  standardHeaders: true, // return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // disable `X-RateLimit-*` headers
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
 });
-app.use("/api", limiter); // Apply only to API routes (optional)
+// app.use("/api", limiter); // optional
 
+// ----------------------------
 // LOGGING
+// ----------------------------
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
+// ----------------------------
 // BODY PARSERS
+// ----------------------------
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
+// ----------------------------
 // DATA SANITIZATION
-// app.use(xss()); // Prevent XSS
-app.use(hpp()); // Prevent HTTP parameter pollution
+// ----------------------------
+app.use(hpp());
 
-// CORS
+// ----------------------------
+// CORS (API routes)
+// ----------------------------
 app.use(
+  "/api",
   cors({
     origin: CORS_ORIGINS,
     credentials: true,
   })
 );
 
+// ----------------------------
+// SERVE UPLOADS (Static Files)
+// ----------------------------
+// Serve uploads (avatars) safely for cross-origin
+const uploadsPath = path.join(process.cwd(), "uploads");
+
+app.use(
+  "/uploads",
+  express.static(uploadsPath, {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+      // Force headers that allow cross-origin images
+      res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.removeHeader("Cross-Origin-Opener-Policy"); // important
+    },
+  })
+);
+
+// ----------------------------
 // COMPRESSION
+// ----------------------------
 app.use(compression());
 
+// ----------------------------
 // ROUTES
+// ----------------------------
 app.use("/api/v1/auth", routes.authRouter);
 app.use("/api/v1/user", routes.userRouter);
 app.use("/api/v1/posts", routes.postRouter);
 app.use("/api/v1/comments", routes.commentRouter);
 app.use("/api/v1/tags", routes.tagRouter);
 
+// ----------------------------
 // UNHANDLED ROUTES
+// ----------------------------
 app.all("/*b", (req, res, next) => {
   next(new CustomError(404, `Can't find ${req.originalUrl} on this server!`));
 });
 
+// ----------------------------
 // GLOBAL ERROR HANDLER
+// ----------------------------
 app.use(globalErrorHandler);
 
 export default app;
