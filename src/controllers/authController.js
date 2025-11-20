@@ -53,6 +53,7 @@ async function loginUser(req, res, next) {
 }
 
 async function logoutUser(req, res, next) {
+  console.log("Logging out...");
   const token = req.cookies?.refreshToken;
   if (token) {
     const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
@@ -61,6 +62,7 @@ async function logoutUser(req, res, next) {
   }
 
   res.clearCookie("refreshToken", CLEAR_COOKIE_SETTINGS);
+  console.log("CLEARED refresh token");
 
   successResponse(res, 200, "Logged out successfully");
 }

@@ -11,7 +11,6 @@ async function createComment(req, res, next) {
 
   const { comment: commentBody } = matchedData(req);
 
-  console.log(postId, authorId);
   const comment = await commentService.createComment(postId, authorId, commentBody);
   successResponse(res, 201, "Comment created successfully", comment);
 }

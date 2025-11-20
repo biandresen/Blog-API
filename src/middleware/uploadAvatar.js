@@ -1,7 +1,9 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import CustomError from "../utils/CustomError.js"; // import your CustomError
 
+const LIMIT_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const uploadDir = path.join(process.cwd(), "uploads", "avatars");
 fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -16,9 +18,12 @@ const storage = multer.diskStorage({
 const uploadAvatar = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    file.mimetype.startsWith("image/") ? cb(null, true) : cb(new Error("Only images allowed"), false);
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new CustomError(400, "Only image files are allowed"));
+    }
+    cb(null, true);
   },
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: LIMIT_FILE_SIZE },
 });
 
 export default uploadAvatar;
