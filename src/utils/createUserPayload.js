@@ -10,7 +10,8 @@
  */
 
 function createUserPayload(user) {
-  return { id: user.id, username: user.username, email: user.email, role: user.role };
+  console.log(user);
+  return { id: user.id, username: user.username, email: user.email, avatar: user.avatar, role: user.role };
 }
 
 export default createUserPayload;
