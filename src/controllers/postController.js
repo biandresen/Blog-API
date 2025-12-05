@@ -149,6 +149,27 @@ async function searchPosts(req, res, next) {
   successResponse(res, 200, message, data, count);
 }
 
+async function toggleLike(req, res, next) {
+  const userId = req.user?.id;
+  if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
+
+  const postId = Number(req.params?.id);
+  if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+
+  const post = postService.getPostById(postId);
+  if (!post) return next(new CustomError(404, `No post with id ${postId} found`));
+
+  const existing = await postService.hasLiked(postId, userId);
+
+  if (existing) {
+    await postService.removeLike(postId, userId);
+    return successResponse(res, 200, "Unliked post");
+  } else {
+    await postService.addLike(postId, userId);
+    return successResponse(res, 201, "Liked post");
+  }
+}
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
@@ -160,4 +181,5 @@ export default {
   getAllDrafts,
   publishDraft,
   searchPosts,
+  toggleLike,
 };

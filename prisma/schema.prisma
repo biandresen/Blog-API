@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 enum Role {
@@ -28,6 +28,7 @@ model User {
   role          Role           @default(USER)
   blogPosts     BlogPost[]
   comments      Comment[]
+  likes         PostLike[]
   refreshTokens RefreshToken[]
   createdAt     DateTime       @default(now())
   changedAt     DateTime       @updatedAt
@@ -41,6 +42,7 @@ model BlogPost {
   body      String
   published Boolean   @default(false)
   comments  Comment[]
+  likes     PostLike[]
   tags      Tag[]     @relation("PostTags")
   createdAt DateTime  @default(now())
   changedAt DateTime  @updatedAt
@@ -74,4 +76,12 @@ model RefreshToken {
   expiresAt DateTime
   userAgent String?
   ipAddress String?
+}
+
+model PostLike {
+  postId    Int
+  userId    Int
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([postId, userId])
 }

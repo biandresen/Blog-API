@@ -25,6 +25,13 @@ async function getAllPosts({ page = 1, limit = 10, sort = "asc", tag = null } = 
     take: parsedLimit,
     include: {
       tags: true,
+      likes: {
+        include: {
+          user: {
+            select: { id: true, username: true },
+          },
+        },
+      },
       comments: {
         orderBy: {
           createdAt: "asc",
@@ -115,6 +122,13 @@ async function getAllPostsByAuthor(
     take: parsedLimit,
     include: {
       tags: true,
+      likes: {
+        include: {
+          user: {
+            select: { id: true, username: true },
+          },
+        },
+      },
       comments: true,
       user: {
         select: {
@@ -137,6 +151,13 @@ async function getPostById(postId, { published } = {}) {
     where: whereClause,
     include: {
       tags: true,
+      likes: {
+        include: {
+          user: {
+            select: { id: true, username: true },
+          },
+        },
+      },
       comments: true,
       user: {
         select: {
@@ -204,6 +225,29 @@ async function publishDraft(postId) {
     data: {
       published: true,
     },
+  });
+}
+
+async function addLike(postId, userId) {
+  return prisma.postLike.create({
+    data: { postId, userId },
+  });
+}
+
+async function removeLike(postId, userId) {
+  return prisma.postLike.delete({
+    where: {
+      postId_userId: {
+        postId,
+        userId,
+      },
+    },
+  });
+}
+
+async function hasLiked(postId, userId) {
+  return prisma.postLike.findUnique({
+    where: { postId_userId: { postId, userId } },
   });
 }
 
@@ -285,4 +329,7 @@ export default {
   deletePost,
   publishDraft,
   searchPosts,
+  addLike,
+  removeLike,
+  hasLiked,
 };

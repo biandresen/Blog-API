@@ -59,6 +59,8 @@ router.patch(
   asyncErrorHandler(postController.updatePost)
 );
 
+router.post("/:id/like", isAuthenticated, asyncErrorHandler(postController.toggleLike));
+
 router.post(
   "/:id/comments",
   isAuthenticated,
