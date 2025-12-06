@@ -18,6 +18,16 @@ async function getAllPosts(req, res, next) {
   successResponse(res, 200, message, data, count);
 }
 
+async function getPopularPosts(req, res, next) {
+  const posts = await postService.getPopularPosts();
+
+  const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
+  const data = posts.length > 0 ? posts : [];
+  const count = posts.length;
+
+  successResponse(res, 200, message, data, count);
+}
+
 async function getAllPostsFromUser(req, res, next) {
   const userId = Number(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
@@ -173,6 +183,7 @@ async function toggleLike(req, res, next) {
 export default {
   getAllPostsFromUser,
   getAllPosts,
+  getPopularPosts,
   getPost,
   createPost,
   updatePost,

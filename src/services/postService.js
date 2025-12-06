@@ -319,6 +319,47 @@ async function searchPosts(searchParameters, { page = 1, limit = 10, sort = "des
   });
 }
 
+async function getPopularPosts({ limit = 10, tag = null } = {}) {
+  const parsedLimit = parseInt(limit) || 10;
+
+  return await prisma.blogPost.findMany({
+    where: {
+      published: true,
+      ...(tag?.length && {
+        tags: {
+          some: {
+            name: {
+              in: tag,
+            },
+          },
+        },
+      }),
+    },
+    orderBy: [
+      { likes: { _count: "desc" } }, // Most likes first
+      { createdAt: "desc" }, // Tie-breaker: newest first
+    ],
+    take: parsedLimit,
+    include: {
+      tags: true,
+      likes: {
+        include: {
+          user: { select: { id: true, username: true } },
+        },
+      },
+      comments: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        },
+      },
+      user: {
+        select: { id: true, username: true, avatar: true },
+      },
+    },
+  });
+}
+
 export default {
   getAllPosts,
   getAllDrafts,
@@ -329,6 +370,7 @@ export default {
   deletePost,
   publishDraft,
   searchPosts,
+  getPopularPosts,
   addLike,
   removeLike,
   hasLiked,

@@ -22,6 +22,8 @@ router.get(
   asyncErrorHandler(postController.searchPosts)
 );
 
+router.get("/popular", asyncErrorHandler(postController.getPopularPosts));
+
 router.get(
   "/drafts",
   isAuthenticated,
