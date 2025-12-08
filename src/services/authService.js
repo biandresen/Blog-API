@@ -1,5 +1,51 @@
 import prisma from "../config/prismaClient.js";
 
+async function storeResetPasswordToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
+  // 1. Delete any existing token for this user-agent
+  await prisma.resetPasswordToken.deleteMany({
+    where: {
+      userId,
+      userAgent,
+    },
+  });
+  // 2. Get all current tokens for the user
+  const tokens = await prisma.resetPasswordToken.findMany({
+    where: { userId },
+    orderBy: { issuedAt: "asc" },
+  });
+
+  // 3. If more than 4 exist, remove the oldest to stay under 5
+  if (tokens.length >= 5) {
+    await prisma.resetPasswordToken.delete({
+      where: { id: tokens[0].id },
+    });
+  }
+
+  // 4. Create new token
+  return await prisma.resetPasswordToken.create({
+    data: {
+      userId,
+      token,
+      issuedAt,
+      expiresAt,
+      userAgent,
+      ipAddress,
+    },
+  });
+}
+
+async function getRecordFromResetPasswordToken(token) {
+  return await prisma.resetPasswordToken.findFirst({
+    where: { token },
+  });
+}
+
+async function deleteResetPasswordToken(id) {
+  return await prisma.resetPasswordToken.delete({
+    where: { id },
+  });
+}
+
 async function storeRefreshToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
   // 1. Delete any existing token for this user-agent
   await prisma.refreshToken.deleteMany({
@@ -55,4 +101,7 @@ export default {
   storeRefreshToken,
   deleteRefreshToken,
   getRefreshToken,
+  storeResetPasswordToken,
+  getRecordFromResetPasswordToken,
+  deleteResetPasswordToken,
 };

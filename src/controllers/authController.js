@@ -1,5 +1,6 @@
 import { matchedData } from "express-validator";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 import { hashPassword, matchPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
@@ -11,6 +12,7 @@ import createTokenData from "../utils/createTokenData.js";
 import REFRESH_TOKEN_COOKIE_SETTINGS from "../utils/refreshTokenCookieSettings.js";
 import createTokens from "../utils/createTokens.js";
 import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
+import emailService from "../services/emailService.js";
 
 async function registerUser(req, res, next) {
   const { username, email, password } = matchedData(req);
@@ -89,9 +91,70 @@ async function refreshAccessToken(req, res, next) {
   successResponse(res, 200, "New access token provided", accessToken);
 }
 
+async function resetPassword(req, res, next) {
+  const { email } = matchedData(req);
+
+  const user = await userService.getUserByEmail(email);
+  if (!user) return next(new CustomError(404, "User not found"));
+  if (!user.active) return next(new CustomError(403, "User is inactive"));
+
+  // raw token sent to user
+  const rawToken = crypto.randomBytes(32).toString("hex");
+
+  // hashed token stored
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  const issuedAt = new Date();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+  await authService.storeResetPasswordToken(user.id, {
+    token: hashedToken,
+    issuedAt,
+    expiresAt,
+    userAgent: req.headers["user-agent"] || null,
+    ipAddress: req.ip,
+  });
+
+  const resetUrl = `http://localhost:5173/reset-password/${rawToken}`;
+
+  await emailService.sendResetPasswordEmail(user.email, resetUrl);
+
+  return successResponse(res, 200, "Reset password email sent", email);
+}
+
+async function processResetPassword(req, res, next) {
+  const { token } = req.body;
+  const { password } = matchedData(req);
+
+  if (!token) return next(new CustomError(400, "Invalid token"));
+
+  const hashedPassword = await hashPassword(password);
+
+  // hash incoming token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const record = await authService.getRecordFromResetPasswordToken(hashedToken);
+  if (!record) return next(new CustomError(400, "Invalid or expired token"));
+
+  const user = await userService.getUserById(record.userId);
+  if (!user) return next(new CustomError(404, "User not found"));
+
+  if (record.expiresAt < new Date()) return next(new CustomError(400, "Token expired"));
+
+  // update password
+  await userService.updateUser(record.userId, { password: hashedPassword });
+
+  // delete token
+  authService.deleteResetPasswordToken(record.id);
+
+  return successResponse(res, 200, "Password updated");
+}
+
 export default {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
+  resetPassword,
+  processResetPassword,
 };

@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -19,33 +19,34 @@ enum Role {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  username      String         @unique
-  email         String         @unique
-  password      String
-  avatar        String?
-  active        Boolean        @default(true)
-  role          Role           @default(USER)
-  blogPosts     BlogPost[]
-  comments      Comment[]
-  likes         PostLike[]
-  refreshTokens RefreshToken[]
-  createdAt     DateTime       @default(now())
-  changedAt     DateTime       @updatedAt
+  id                  Int                  @id @default(autoincrement())
+  username            String               @unique
+  email               String               @unique
+  password            String
+  avatar              String?
+  active              Boolean              @default(true)
+  role                Role                 @default(USER)
+  blogPosts           BlogPost[]
+  comments            Comment[]
+  likes               PostLike[]
+  refreshTokens       RefreshToken[]
+  createdAt           DateTime             @default(now())
+  changedAt           DateTime             @updatedAt
+  resetPasswordTokens ResetPasswordToken[]
 }
 
 model BlogPost {
-  id        Int       @id @default(autoincrement())
-  user      User      @relation(fields: [authorId], references: [id])
+  id        Int        @id @default(autoincrement())
+  user      User       @relation(fields: [authorId], references: [id])
   authorId  Int
   title     String
   body      String
-  published Boolean   @default(false)
+  published Boolean    @default(false)
   comments  Comment[]
   likes     PostLike[]
-  tags      Tag[]     @relation("PostTags")
-  createdAt DateTime  @default(now())
-  changedAt DateTime  @updatedAt
+  tags      Tag[]      @relation("PostTags")
+  createdAt DateTime   @default(now())
+  changedAt DateTime   @updatedAt
 }
 
 model Comment {
@@ -78,10 +79,22 @@ model RefreshToken {
   ipAddress String?
 }
 
-model PostLike {
-  postId    Int
+model ResetPasswordToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  issuedAt  DateTime
+  expiresAt DateTime
+  userAgent String?
+  ipAddress String?
+}
+
+model PostLike {
+  postId Int
+  userId Int
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([postId, userId])
 }
