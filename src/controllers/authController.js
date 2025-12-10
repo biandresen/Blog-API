@@ -36,9 +36,9 @@ async function loginUser(req, res, next) {
     user = await userService.getUserByUsername(userInput);
   }
 
-  if (!user.active) return next(new CustomError(403, "User is inactive"));
-
   if (!user) return next(new CustomError(401, "Invalid credentials"));
+
+  if (!user?.active) return next(new CustomError(403, "User is inactive"));
 
   const isMatch = await matchPassword(password, user.password);
   if (!isMatch) return next(new CustomError(401, "Invalid credentials"));

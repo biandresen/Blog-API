@@ -87,6 +87,7 @@ async function getAllDrafts({ page = 1, limit = 10, sort = "desc", tag = null } 
         select: {
           id: true,
           username: true,
+          avatar: true,
         },
       },
     },
@@ -134,6 +135,7 @@ async function getAllPostsByAuthor(
         select: {
           id: true,
           username: true,
+          avatar: true,
         },
       },
     },
@@ -163,6 +165,7 @@ async function getPostById(postId, { published } = {}) {
         select: {
           id: true,
           username: true,
+          avatar: true,
         },
       },
     },
@@ -311,6 +314,7 @@ async function searchPosts(searchParameters, { page = 1, limit = 10, sort = "des
             select: {
               id: true,
               username: true,
+              avatar: true,
             },
           },
         },

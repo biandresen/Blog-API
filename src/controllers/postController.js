@@ -71,7 +71,6 @@ async function createPost(req, res, next) {
 
 async function updatePost(req, res, next) {
   const postId = Number(req.params?.id); //postId is checked in previous middleware
-
   const { title, body, published, tags } = matchedData(req);
 
   const normalizedTags = tags ? normalizeTags(tags) : undefined;
