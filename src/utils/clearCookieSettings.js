@@ -1,8 +1,8 @@
-const CLEAR_COOKIE_SETTINGS = {
+export const CLEAR_COOKIE_SETTINGS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "Strict",
-  path: "/", // <-- important for clearing the cookie
+  sameSite: "lax",
+  path: "/api/v1/auth/refresh",
 };
 
 export default CLEAR_COOKIE_SETTINGS;

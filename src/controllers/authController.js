@@ -14,6 +14,10 @@ import createTokens from "../utils/createTokens.js";
 import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
 import emailService from "../services/emailService.js";
 
+async function health(req, res, next) {
+  successResponse(res, 200, "Health is ok");
+}
+
 async function registerUser(req, res, next) {
   const { username, email, password } = matchedData(req);
 
@@ -55,7 +59,6 @@ async function loginUser(req, res, next) {
 }
 
 async function logoutUser(req, res, next) {
-  console.log("Logging out...");
   const token = req.cookies?.refreshToken;
   if (token) {
     const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
@@ -64,13 +67,11 @@ async function logoutUser(req, res, next) {
   }
 
   res.clearCookie("refreshToken", CLEAR_COOKIE_SETTINGS);
-  console.log("CLEARED refresh token");
 
   successResponse(res, 200, "Logged out successfully");
 }
 
 async function refreshAccessToken(req, res, next) {
-  console.log("REFRESHED:", req.cookies);
   const token = req.cookies?.refreshToken;
   if (!token) return next(new CustomError(400, "No refresh token. Please login"));
 
@@ -93,6 +94,10 @@ async function refreshAccessToken(req, res, next) {
 
 async function resetPassword(req, res, next) {
   const { email } = matchedData(req);
+  const FRONTEND_BASE_URL =
+    req.headers["x-frontend-url"] ||
+    process.env.FRONTEND_BASE_URL ||
+    "http://localhost:5173"; // fallback
 
   const user = await userService.getUserByEmail(email);
   if (!user) return next(new CustomError(404, "User not found"));
@@ -115,7 +120,7 @@ async function resetPassword(req, res, next) {
     ipAddress: req.ip,
   });
 
-  const resetUrl = `http://localhost:5173/reset-password/${rawToken}`;
+  const resetUrl = `${FRONTEND_BASE_URL}/reset-password/${rawToken}`;
 
   await emailService.sendResetPasswordEmail(user.email, resetUrl);
 
@@ -151,6 +156,7 @@ async function processResetPassword(req, res, next) {
 }
 
 export default {
+  health,
   registerUser,
   loginUser,
   logoutUser,

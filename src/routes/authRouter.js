@@ -9,6 +9,8 @@ import updatePasswordValidator from "../validation/updatePasswordValidator.js";
 
 const router = Router();
 
+router.get("/health", authController.health)
+
 router.post(
   "/register",
   registerUserValidator,

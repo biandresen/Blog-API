@@ -58,13 +58,14 @@ app.use(hpp());
 // ----------------------------
 // CORS (API routes)
 // ----------------------------
-app.use(
-  "/api",
-  cors({
-    origin: CORS_ORIGINS,
-    credentials: true,
-  })
-);
+app.use("/api", cors({
+  origin: (origin, cb) => {
+    // allow non-browser clients with no Origin header
+    if (!origin) return cb(null, true);
+    return allowedOrigins.has(origin) ? cb(null, true) : cb(new Error("CORS blocked"), false);
+  },
+  credentials: true,
+}));
 
 // ----------------------------
 // SERVE UPLOADS (Static Files)
@@ -79,7 +80,7 @@ app.use(
     lastModified: true,
     setHeaders: (res) => {
       // Force headers that allow cross-origin images
-      res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+      res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Credentials", "true");
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       res.removeHeader("Cross-Origin-Opener-Policy"); // important

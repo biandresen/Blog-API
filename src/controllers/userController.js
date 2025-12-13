@@ -86,26 +86,26 @@ async function updateUserProfile(req, res, next) {
   if (req.file && oldAvatarPath) {
     try {
       const newAvatarRelative = userUpdateData.avatar; // "/uploads/avatars/..."
-      console.log("oldAvatarPath (raw):", JSON.stringify(oldAvatarPath));
-      console.log("newAvatarRelative:", JSON.stringify(newAvatarRelative));
+      // console.log("oldAvatarPath (raw):", JSON.stringify(oldAvatarPath));
+      // console.log("newAvatarRelative:", JSON.stringify(newAvatarRelative));
 
       // Safety: don't delete if the old path equals the new path
       if (newAvatarRelative && oldAvatarPath === newAvatarRelative) {
-        console.log("Old avatar equals new avatar — skipping delete");
+        // console.log("Old avatar equals new avatar — skipping delete");
       } else {
         const fullOldPath = path.resolve(process.cwd(), `.${oldAvatarPath}`);
-        console.log("Resolved fullOldPath:", fullOldPath);
+        // console.log("Resolved fullOldPath:", fullOldPath);
 
         // Extra sanity: ensure fullOldPath is inside uploads dir
         const uploadsDir = path.resolve(process.cwd(), "uploads");
         if (!fullOldPath.startsWith(uploadsDir)) {
-          console.warn("Refusing to delete outside uploads folder:", fullOldPath);
+          // console.warn("Refusing to delete outside uploads folder:", fullOldPath);
         } else {
           try {
             await fs.promises.access(fullOldPath, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
-            console.log("File exists and is accessible — deleting:", fullOldPath);
+            // console.log("File exists and is accessible — deleting:", fullOldPath);
             await fs.promises.unlink(fullOldPath);
-            console.log("unlink successful:", fullOldPath);
+            // console.log("unlink successful:", fullOldPath);
           } catch (err) {
             if (err.code === "ENOENT") {
               console.log("File not found (already removed):", fullOldPath);
