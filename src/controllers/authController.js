@@ -97,7 +97,7 @@ async function resetPassword(req, res, next) {
   const FRONTEND_BASE_URL =
     req.headers["x-frontend-url"] ||
     process.env.FRONTEND_BASE_URL ||
-    "http://localhost:5173"; // fallback
+    "bloggy-app.dev"; // fallback
 
   const user = await userService.getUserByEmail(email);
   if (!user) return next(new CustomError(404, "User not found"));

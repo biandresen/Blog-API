@@ -58,11 +58,16 @@ app.use(hpp());
 // ----------------------------
 // CORS (API routes)
 // ----------------------------
+const allowedOrigins = new Set(CORS_ORIGINS);
+
 app.use("/api", cors({
   origin: (origin, cb) => {
-    // allow non-browser clients with no Origin header
+    // allow non-browser clients (curl/postman) with no Origin header
     if (!origin) return cb(null, true);
-    return allowedOrigins.has(origin) ? cb(null, true) : cb(new Error("CORS blocked"), false);
+
+    if (allowedOrigins.has(origin)) return cb(null, true);
+
+    return cb(new Error(`CORS blocked for origin: ${origin}`), false);
   },
   credentials: true,
 }));
