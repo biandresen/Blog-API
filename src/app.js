@@ -13,6 +13,9 @@ import CustomError from "./utils/CustomError.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import routes from "./routes/index.js";
 import { CORS_ORIGINS } from "./constants.js";
+import { generalApiLimiter } from "./middleware/rateLimiters.js";
+
+
 
 const app = express();
 
@@ -30,11 +33,12 @@ app.use(
 // ----------------------------
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
 });
-// app.use("/api", limiter); // optional
+
+app.use("/api", generalApiLimiter);
 
 // ----------------------------
 // LOGGING
@@ -76,22 +80,19 @@ app.use("/api", cors({
 // SERVE UPLOADS (Static Files)
 // ----------------------------
 // Serve uploads (avatars) safely for cross-origin
+
 const uploadsPath = path.join(process.cwd(), "uploads");
 
-app.use(
-  "/uploads",
-  express.static(uploadsPath, {
-    etag: true,
-    lastModified: true,
-    setHeaders: (res) => {
-      // Force headers that allow cross-origin images
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-      res.removeHeader("Cross-Origin-Opener-Policy"); // important
-    },
-  })
-);
+app.use("/uploads", express.static(uploadsPath, {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+    // For avatars to be embeddable on other origins, use:
+    // res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  },
+}));
+
 
 // ----------------------------
 // COMPRESSION

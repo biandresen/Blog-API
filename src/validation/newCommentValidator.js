@@ -1,5 +1,5 @@
 import { body } from "express-validator";
-import { MAX_CHARS } from "../constants";
+import { MAX_CHARS } from "../constants.js";
 
 const newCommentValidator = [
   body("comment")

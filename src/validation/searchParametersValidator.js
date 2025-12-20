@@ -1,5 +1,5 @@
 import { query } from "express-validator";
-import { MAX_CHARS } from "../constants";
+import { MAX_CHARS } from "../constants.js";
 
 // Validation middleware
 const searchParametersValidator = [

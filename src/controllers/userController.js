@@ -8,6 +8,7 @@ import ensureAllowedFields from "../utils/ensureAllowedFields.js";
 import successResponse from "../utils/successResponse.js";
 import fs from "fs";
 import path from "path";
+import { UPLOADS_DIR } from "../config/paths.js";
 
 async function getUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);
@@ -50,80 +51,92 @@ async function getUserProfileByNameOrEmail(req, res, next) {
   successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
 }
 
+// Resolve a public URL like "/uploads/avatars/abc.webp" -> absolute filesystem path.
+// Returns null if URL is not a local uploads URL (safety).
+function resolveUploadsFilePath(avatarUrl) {
+  if (!avatarUrl || typeof avatarUrl !== "string") return null;
+
+  // Only allow deleting files that live under your public uploads URL
+  if (!avatarUrl.startsWith("/uploads/")) return null;
+
+  // Convert URL path -> filesystem path.
+  // Public URL "/uploads/..." maps to filesystem "<UPLOADS_DIR>/..."
+  const relativeInsideUploads = avatarUrl.replace(/^\/uploads\/?/, ""); // "avatars/abc.webp"
+  const fullPath = path.resolve(UPLOADS_DIR, relativeInsideUploads);
+
+  // Ensure the resolved path stays inside UPLOADS_DIR (prevents traversal deletes)
+  if (!fullPath.startsWith(UPLOADS_DIR + path.sep)) return null;
+
+  return fullPath;
+}
+
 async function updateUserProfile(req, res, next) {
-  const userId = parseInt(req.params?.id);
-  if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
+    const userId = Number.parseInt(req.params?.id, 10);
+    if (Number.isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
-  const currentUser = req.user;
-  if (!currentUser) return next(new CustomError(401, "Unauthorized"));
+    const currentUser = req.user;
+    if (!currentUser) return next(new CustomError(401, "Unauthorized"));
 
-  const userUpdateData = matchedData(req);
+    // Only validated/sanitized fields
+    const userUpdateData = matchedData(req);
 
-  // Handle password
-  if (userUpdateData.password) {
-    userUpdateData.password = await hashPassword(userUpdateData.password);
-  } else {
-    delete userUpdateData.password;
-  }
+    // Handle password
+    if (userUpdateData.password) {
+      userUpdateData.password = await hashPassword(userUpdateData.password);
+    } else {
+      delete userUpdateData.password;
+    }
 
-  let oldAvatarPath = null;
+    let oldAvatarUrl = null;
 
-  console.log("Controller req.file:", req.file);
+    /**
+     * The new upload pipeline (multer memory + sharp processing) sets:
+     * req.processedImage = { filename, relativeUrl, bytes, mime }
+     *
+     * If no file was uploaded, req.processedImage is undefined.
+     */
+    if (req.processedImage) {
+      const existingUser = await userService.getUserById(userId);
+      oldAvatarUrl = existingUser.avatar; // e.g. "/uploads/avatars/old.webp" or null
 
-  // Only fetch the user's current avatar if a new avatar is uploaded
-  if (req.file) {
-    const existingUser = await userService.getUserById(userId);
-    oldAvatarPath = existingUser.avatar; // null or "/uploads/avatars/...png"
-    console.log("Old path: ", oldAvatarPath);
-    userUpdateData.avatar = `/uploads/avatars/${req.file.filename}`;
-  }
+      // Store the URL we will serve publicly (always webp with your pipeline)
+      userUpdateData.avatar = req.processedImage.relativeUrl; // e.g. "/uploads/avatars/<new>.webp"
+    }
 
-  const fieldsToUpdate = ensureAllowedFields(userUpdateData, ["username", "email", "password", "avatar"]);
+    const fieldsToUpdate = ensureAllowedFields(userUpdateData, [
+      "username",
+      "email",
+      "password",
+      "avatar",
+    ]);
 
-  const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
+    const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
 
-  // Delete old avatar if new one was uploaded
-  if (req.file && oldAvatarPath) {
-    try {
-      const newAvatarRelative = userUpdateData.avatar; // "/uploads/avatars/..."
-      // console.log("oldAvatarPath (raw):", JSON.stringify(oldAvatarPath));
-      // console.log("newAvatarRelative:", JSON.stringify(newAvatarRelative));
+    // Delete old avatar if a new one was uploaded and there was an old one
+    if (req.processedImage && oldAvatarUrl) {
+      const newAvatarUrl = userUpdateData.avatar;
 
-      // Safety: don't delete if the old path equals the new path
-      if (newAvatarRelative && oldAvatarPath === newAvatarRelative) {
-        // console.log("Old avatar equals new avatar — skipping delete");
-      } else {
-        const fullOldPath = path.resolve(process.cwd(), `.${oldAvatarPath}`);
-        // console.log("Resolved fullOldPath:", fullOldPath);
+      // Safety: don't delete if unchanged
+      if (newAvatarUrl && oldAvatarUrl !== newAvatarUrl) {
+        const fullOldPath = resolveUploadsFilePath(oldAvatarUrl);
 
-        // Extra sanity: ensure fullOldPath is inside uploads dir
-        const uploadsDir = path.resolve(process.cwd(), "uploads");
-        if (!fullOldPath.startsWith(uploadsDir)) {
-          // console.warn("Refusing to delete outside uploads folder:", fullOldPath);
-        } else {
+        if (fullOldPath) {
           try {
-            await fs.promises.access(fullOldPath, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
-            // console.log("File exists and is accessible — deleting:", fullOldPath);
             await fs.promises.unlink(fullOldPath);
-            // console.log("unlink successful:", fullOldPath);
           } catch (err) {
-            if (err.code === "ENOENT") {
-              console.log("File not found (already removed):", fullOldPath);
-            } else {
+            if (err.code !== "ENOENT") {
               console.error("Could not delete old avatar:", err);
             }
           }
+        } else {
+          // If it wasn't a local uploads file, do not attempt deletion
+          console.warn("Refusing to delete non-local avatar URL:", oldAvatarUrl);
         }
       }
-    } catch (err) {
-      console.error("Unexpected error during old-avatar deletion:", err);
     }
-  } else {
-    console.log("Skipping deletion — req.file or oldAvatarPath falsy:", !!req.file, !!oldAvatarPath);
-  }
 
-  const userWithoutPassword = removePwFromUser(updatedUser);
-  successResponse(res, 200, "User updated successfully", userWithoutPassword);
+    const userWithoutPassword = removePwFromUser(updatedUser);
+    return successResponse(res, 200, "User updated successfully", userWithoutPassword);
 }
 
 async function changeUserRole(req, res, next) {

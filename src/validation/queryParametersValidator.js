@@ -4,7 +4,6 @@ import { query } from "express-validator";
 const queryParametersValidator = [
   query("page").optional().trim().isInt({ min: 1 }).withMessage("page must be a positive integer").toInt(),
 
-  ,
   query("limit")
     .optional()
     .trim()
