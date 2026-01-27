@@ -160,7 +160,10 @@ async function getPostById(postId, { published } = {}) {
           },
         },
       },
-      comments: true,
+      comments: {
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        }},
       user: {
         select: {
           id: true,

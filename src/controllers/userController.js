@@ -10,6 +10,22 @@ import fs from "fs";
 import path from "path";
 import { UPLOADS_DIR } from "../config/paths.js";
 
+
+async function getMe(req, res, next) {
+  console.log("GetMe")
+  const currentUser = req.user;
+  if (!currentUser) return next(new CustomError(401, "Unauthorized. Please log in."));
+
+  const userId = parseInt(currentUser.id);
+  if (isNaN(userId)) return next(new CustomError(401, "Invalid token payload."));
+
+  const user = await userService.getUserById(userId);
+  if (!user) return next(new CustomError(404, "User not found"));
+
+  const userWithoutPassword = removePwFromUser(user);
+  return successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
+}
+
 async function getUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
@@ -180,6 +196,7 @@ export default {
   getUserProfile,
   getUserProfileByNameOrEmail,
   updateUserProfile,
+  getMe,
   changeUserRole,
   reactivateUser,
   deleteUser,

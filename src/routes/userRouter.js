@@ -15,6 +15,7 @@ import { uploadLimiter } from "../middleware/rateLimiters.js";
 
 const router = Router();
 
+router.get("/me", isAuthenticated, asyncErrorHandler(userController.getMe));
 router.get("/:id", isAuthenticated, asyncErrorHandler(userController.getUserProfile));
 router.get(
   "/input/:userInput",
