@@ -12,7 +12,6 @@ import { UPLOADS_DIR } from "../config/paths.js";
 
 
 async function getMe(req, res, next) {
-  console.log("GetMe")
   const currentUser = req.user;
   if (!currentUser) return next(new CustomError(401, "Unauthorized. Please log in."));
 
