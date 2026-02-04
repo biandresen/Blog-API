@@ -126,7 +126,6 @@ async function updateUserProfile(req, res, next) {
     ]);
 
     const updatedUser = await userService.updateUser(userId, fieldsToUpdate);
-
     // Delete old avatar if a new one was uploaded and there was an old one
     if (req.processedImage && oldAvatarUrl) {
       const newAvatarUrl = userUpdateData.avatar;
@@ -134,7 +133,6 @@ async function updateUserProfile(req, res, next) {
       // Safety: don't delete if unchanged
       if (newAvatarUrl && oldAvatarUrl !== newAvatarUrl) {
         const fullOldPath = resolveUploadsFilePath(oldAvatarUrl);
-
         if (fullOldPath) {
           try {
             await fs.promises.unlink(fullOldPath);
@@ -149,7 +147,6 @@ async function updateUserProfile(req, res, next) {
         }
       }
     }
-
     const userWithoutPassword = removePwFromUser(updatedUser);
     return successResponse(res, 200, "User updated successfully", userWithoutPassword);
 }
