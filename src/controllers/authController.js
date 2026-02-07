@@ -95,9 +95,7 @@ async function refreshAccessToken(req, res, next) {
 async function resetPassword(req, res, next) {
   const { email } = matchedData(req);
   const FRONTEND_BASE_URL =
-    req.headers["x-frontend-url"] ||
-    process.env.FRONTEND_BASE_URL ||
-    "bloggy-app.dev"; // fallback
+  process.env.FRONTEND_BASE_URL || "https://bloggy-app.dev";
 
   const user = await userService.getUserByEmail(email);
   if (!user) return next(new CustomError(404, "User not found"));
