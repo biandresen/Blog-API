@@ -1,8 +1,8 @@
 import prisma from "../config/prismaClient.js";
 
-async function getAllPosts({ page = 1, limit = 10, sort = "asc", tag = null } = {}) {
+async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
-  const parsedLimit = parseInt(limit) || 10;
+  const parsedLimit = parseInt(limit) || 100;
   const skip = (parsedPage - 1) * parsedLimit;
 
   return await prisma.blogPost.findMany({
@@ -57,9 +57,9 @@ async function getAllPosts({ page = 1, limit = 10, sort = "asc", tag = null } = 
   });
 }
 
-async function getAllDrafts({ page = 1, limit = 10, sort = "desc", tag = null } = {}) {
+async function getAllDrafts({ page = 1, limit = 100, sort = "desc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
-  const parsedLimit = parseInt(limit) || 10;
+  const parsedLimit = parseInt(limit) || 100;
   const skip = (parsedPage - 1) * parsedLimit;
 
   return await prisma.blogPost.findMany({
@@ -96,10 +96,10 @@ async function getAllDrafts({ page = 1, limit = 10, sort = "desc", tag = null } 
 
 async function getAllPostsByAuthor(
   authorId,
-  { page = 1, limit = 10, sort = "desc", tag = null, published = true } = {}
+  { page = 1, limit = 100, sort = "desc", tag = null, published = true } = {}
 ) {
   const parsedPage = parseInt(page) || 1;
-  const parsedLimit = parseInt(limit) || 10;
+  const parsedLimit = parseInt(limit) || 100;
   const skip = (parsedPage - 1) * parsedLimit;
 
   return await prisma.blogPost.findMany({
@@ -175,6 +175,40 @@ async function getPostById(postId, { published } = {}) {
   });
 }
 
+async function getRandomPost() {
+  const count = await prisma.blogPost.count({
+    where: { published: true },
+  });
+
+  if (count === 0) return null;
+
+  const skip = Math.floor(Math.random() * count);
+
+  const [post] = await prisma.blogPost.findMany({
+    where: { published: true },
+    orderBy: { id: "asc" },
+    skip,
+    take: 1,
+    include: {
+      tags: true,
+      likes: {
+        include: {
+          user: { select: { id: true, username: true } },
+        },
+      },
+      comments: {
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        },
+      },
+      user: { select: { id: true, username: true, avatar: true } },
+    },
+  });
+
+  return post ?? null;
+}
+
+
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
   return await prisma.blogPost.create({
     data: {
@@ -204,7 +238,7 @@ async function updatePost(postId, { title, body, published, tags }) {
 
   if (tags !== undefined) {
     updateData.tags = {
-      set: [], // Remove all old tags
+      set: [],
       connectOrCreate: tags.map((tagName) => ({
         where: { name: tagName },
         create: { name: tagName },
@@ -212,12 +246,27 @@ async function updatePost(postId, { title, body, published, tags }) {
     };
   }
 
-  return await prisma.blogPost.update({
+  return prisma.blogPost.update({
     where: { id: postId },
     data: updateData,
-    include: { tags: true },
+    include: {
+      tags: true,
+      user: { select: { id: true, username: true, avatar: true, role: true } }, // adjust fields to your schema
+      likes: {
+        include: {
+          user: { select: { id: true, username: true } },
+        },
+      },
+      comments: {
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        },
+        orderBy: { createdAt: "asc" }, // optional
+      },
+    },
   });
 }
+
 
 async function deletePost(postId) {
   return await prisma.blogPost.delete({
@@ -257,7 +306,7 @@ async function hasLiked(postId, userId) {
   });
 }
 
-async function searchPosts(searchParameters, { page = 1, limit = 10, sort = "desc" } = {}) {
+async function searchPosts(searchParameters, { page = 1, limit = 100, sort = "desc" } = {}) {
   const parsedPage = parseInt(page);
   const parsedLimit = parseInt(limit);
   const skip = (parsedPage - 1) * parsedLimit;
@@ -378,6 +427,7 @@ export default {
   publishDraft,
   searchPosts,
   getPopularPosts,
+  getRandomPost,
   addLike,
   removeLike,
   hasLiked,

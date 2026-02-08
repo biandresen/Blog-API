@@ -24,6 +24,8 @@ router.get(
 
 router.get("/popular", asyncErrorHandler(postController.getPopularPosts));
 
+router.get("/random", asyncErrorHandler(postController.getRandomPost));
+
 router.get(
   "/drafts",
   isAuthenticated,

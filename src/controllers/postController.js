@@ -28,6 +28,15 @@ async function getPopularPosts(req, res, next) {
   successResponse(res, 200, message, data, count);
 }
 
+async function getRandomPost(req, res) {
+  const post = await postService.getRandomPost();
+  const message = post ? "Post retrieved successfully" : "No post found";
+  const count = post ? 1 : 0
+
+  return successResponse(res, 200, message, post, count);
+}
+
+
 async function getAllPostsFromUser(req, res, next) {
   const userId = Number(req.params?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
@@ -183,6 +192,7 @@ export default {
   getAllPostsFromUser,
   getAllPosts,
   getPopularPosts,
+  getRandomPost,
   getPost,
   createPost,
   updatePost,
