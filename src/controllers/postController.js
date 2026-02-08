@@ -36,6 +36,13 @@ async function getRandomPost(req, res) {
   return successResponse(res, 200, message, post, count);
 }
 
+async function getDailyPost(req, res) {
+  const post = await postService.getDailyPost();
+  const message = post ? "Post retrieved successfully" : "No post found";
+  const count = post ? 1 : 0
+
+  return successResponse(res, 200, message, post, count);
+}
 
 async function getAllPostsFromUser(req, res, next) {
   const userId = Number(req.params?.id);
@@ -193,6 +200,7 @@ export default {
   getAllPosts,
   getPopularPosts,
   getRandomPost,
+  getDailyPost,
   getPost,
   createPost,
   updatePost,

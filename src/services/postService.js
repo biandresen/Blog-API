@@ -208,6 +208,48 @@ async function getRandomPost() {
   return post ?? null;
 }
 
+async function getDailyPost() {
+  const count = await prisma.blogPost.count({
+    where: { published: true },
+  });
+
+  if (count === 0) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  let hash = 0;
+
+  // Hashing for deterministic selection | Same post every day for everyone
+  for (let i = 0; i < today.length; i++) {
+    hash = today.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const index = Math.abs(hash) % count;
+
+  const [post] = await prisma.blogPost.findMany({
+    where: { published: true },
+    orderBy: { id: "asc" },
+    skip: index,
+    take: 1,
+    include: {
+      tags: true,
+      likes: {
+        include: {
+          user: { select: { id: true, username: true } },
+        },
+      },
+      comments: {
+        include: {
+          user: { select: { id: true, username: true, avatar: true } },
+        },
+      },
+      user: { select: { id: true, username: true, avatar: true } },
+    },
+  });
+
+  return post ?? null;
+}
+
 
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {
   return await prisma.blogPost.create({
@@ -428,6 +470,7 @@ export default {
   searchPosts,
   getPopularPosts,
   getRandomPost,
+  getDailyPost,
   addLike,
   removeLike,
   hasLiked,
