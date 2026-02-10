@@ -6,7 +6,7 @@ import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 import checkValidation from "../middleware/checkValidation.js";
 import resetPasswordValidator from "../validation/resetPasswordValidator.js";
 import updatePasswordValidator from "../validation/updatePasswordValidator.js";
-import { authLimiter } from "../middleware/rateLimiters.js";
+import { authLimiter, registerLimiter } from "../middleware/rateLimiters.js";
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.get("/health", authController.health)
 
 router.post(
   "/register",
-  authLimiter,
+  registerLimiter,
   registerUserValidator,
   checkValidation,
   asyncErrorHandler(authController.registerUser)
@@ -35,6 +35,7 @@ router.post(
 
 router.post(
   "/reset-password",
+  resetPasswordValidator,
   resetPasswordValidator,
   checkValidation,
   asyncErrorHandler(authController.resetPassword)
