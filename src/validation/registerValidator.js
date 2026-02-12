@@ -46,6 +46,13 @@ const registerUserValidator = [
       }
       return true;
     }),
+
+  // Also ensures that bot/spam submissions that skil the checkbox get rejected
+  body("acceptedTerms")
+    .isBoolean()
+    .withMessage("acceptedTerms must be a boolean")
+    .custom((v) => v === true)
+    .withMessage("You must accept the Terms and Community Rules"),
 ];
 
 export default registerUserValidator;

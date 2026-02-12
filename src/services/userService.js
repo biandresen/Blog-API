@@ -27,15 +27,19 @@ async function getUserByEmail(email) {
   });
 }
 
-async function createUser(username, email, password) {
-  return await prisma.user.create({
+async function createUser(username, email, password, meta = {}) {
+  return prisma.user.create({
     data: {
       username,
       email,
       password,
+      termsAcceptedAt: meta.termsAcceptedAt ?? null,
+      termsVersion: meta.termsVersion ?? null,
+      ...meta, // optional additional fields
     },
   });
 }
+
 
 async function updateUser(userId, updateData = {}) {
   const fieldsToUpdate = {};
@@ -59,18 +63,25 @@ async function changeRole(userId, role) {
 }
 
 async function deleteUser(userId) {
-  return await prisma.user.update({
+  return prisma.user.update({
     where: { id: userId },
-    data: { active: false },
+    data: {
+      deletedAt: new Date(),
+      active: false,
+    },
   });
 }
 
 async function reactivateUser(userId) {
-  return await prisma.user.update({
+  return prisma.user.update({
     where: { id: userId },
-    data: { active: true },
+    data: {
+      deletedAt: null,
+      active: true,
+    },
   });
 }
+
 
 export default {
   getUserById,

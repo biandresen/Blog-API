@@ -6,29 +6,57 @@ import { hashPassword, matchPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
 import CustomError from "../utils/CustomError.js";
 import authService from "../services/authService.js";
-import removePwFromUser from "../utils/removePwFromUser.js";
 import successResponse from "../utils/successResponse.js";
 import createTokenData from "../utils/createTokenData.js";
 import REFRESH_TOKEN_COOKIE_SETTINGS from "../utils/refreshTokenCookieSettings.js";
 import createTokens from "../utils/createTokens.js";
 import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
 import emailService from "../services/emailService.js";
+import { toClientUser } from "../utils/toClientUser.js";
+import { LEGAL_VERSIONS } from "../constants.js";
 
 async function health(req, res, next) {
   successResponse(res, 200, "Health is ok");
 }
 
 async function registerUser(req, res, next) {
-  const { username, email, password } = matchedData(req);
+  const { username, email, password, acceptedTerms } = matchedData(req);
+
+  if (!acceptedTerms) {
+    return next(new CustomError(400, "You must accept the Terms and Rules"));
+  }
 
   const hashedPassword = await hashPassword(password);
 
-  const newUser = await userService.createUser(username, email, hashedPassword);
+  const newUser = await userService.createUser(
+    username,
+    email,
+    hashedPassword,
+    {
+      termsAcceptedAt: new Date(),
+      termsVersion: LEGAL_VERSIONS.TERMS,
+    }
+  );
 
-  const userWithoutPassword = removePwFromUser(newUser);
+  // --- AUTO LOGIN ---
+  const { accessToken, refreshToken } = createTokens(newUser);
 
-  successResponse(res, 201, "User created successfully", userWithoutPassword);
+  const tokenData = createTokenData(req, refreshToken);
+
+  await authService.storeRefreshToken(newUser.id, tokenData);
+
+  res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
+
+  const clientUser = toClientUser(newUser);
+
+  successResponse(res, 201, "User created successfully", {
+    accessToken,
+    user: clientUser,
+    needsEmailVerification: false,
+  });
+
 }
+
 
 async function loginUser(req, res, next) {
   const { userInput, password } = matchedData(req);

@@ -1,7 +1,6 @@
 import { matchedData } from "express-validator";
 import { hashPassword } from "../utils/passwordCrypt.js";
 import userService from "../services/userService.js";
-import removePwFromUser from "../utils/removePwFromUser.js";
 import CustomError from "../utils/CustomError.js";
 import { ROLES } from "../constants.js";
 import ensureAllowedFields from "../utils/ensureAllowedFields.js";
@@ -9,6 +8,7 @@ import successResponse from "../utils/successResponse.js";
 import fs from "fs";
 import path from "path";
 import { UPLOADS_DIR } from "../config/paths.js";
+import { toClientUser } from "../utils/toClientUser.js";
 
 
 async function getMe(req, res, next) {
@@ -21,8 +21,8 @@ async function getMe(req, res, next) {
   const user = await userService.getUserById(userId);
   if (!user) return next(new CustomError(404, "User not found"));
 
-  const userWithoutPassword = removePwFromUser(user);
-  return successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
+  const clientUser = toClientUser(user);
+  return successResponse(res, 200, "User retrieved successfully", clientUser);
 }
 
 async function getUserProfile(req, res, next) {
@@ -38,9 +38,9 @@ async function getUserProfile(req, res, next) {
 
   const requestedUser = await userService.getUserById(userId);
 
-  const userWithoutPassword = removePwFromUser(requestedUser);
+  const clientUser = toClientUser(requestedUser);
 
-  successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
+  successResponse(res, 200, "User retrieved successfully", clientUser);
 }
 
 async function getUserProfileByNameOrEmail(req, res, next) {
@@ -61,9 +61,9 @@ async function getUserProfileByNameOrEmail(req, res, next) {
 
   if (!requestedUser) return next(new CustomError(404, "User not found"));
 
-  const userWithoutPassword = removePwFromUser(requestedUser);
+  const clientUser = toClientUser(requestedUser);
 
-  successResponse(res, 200, "User retrieved successfully", userWithoutPassword);
+  successResponse(res, 200, "User retrieved successfully", clientUser);
 }
 
 // Resolve a public URL like "/uploads/avatars/abc.webp" -> absolute filesystem path.
@@ -147,8 +147,8 @@ async function updateUserProfile(req, res, next) {
         }
       }
     }
-    const userWithoutPassword = removePwFromUser(updatedUser);
-    return successResponse(res, 200, "User updated successfully", userWithoutPassword);
+    const clientUser = toClientUser(updatedUser);
+    return successResponse(res, 200, "User updated successfully", clientUser);
 }
 
 async function changeUserRole(req, res, next) {
@@ -161,9 +161,9 @@ async function changeUserRole(req, res, next) {
 
   const updatedUser = await userService.changeRole(userId, fieldsToUpdate);
 
-  const userWithoutPassword = removePwFromUser(updatedUser);
+  const clientUser = toClientUser(updatedUser);
 
-  successResponse(res, 200, "User role updated successfully", userWithoutPassword);
+  successResponse(res, 200, "User role updated successfully", clientUser);
 }
 
 async function deleteUser(req, res, next) {

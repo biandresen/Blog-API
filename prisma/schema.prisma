@@ -31,8 +31,11 @@ model User {
   likes               PostLike[]
   refreshTokens       RefreshToken[]
   createdAt           DateTime             @default(now())
-  changedAt           DateTime             @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt           DateTime?
   resetPasswordTokens ResetPasswordToken[]
+  termsAcceptedAt     DateTime?
+  termsVersion        String?
 }
 
 model BlogPost {
@@ -46,7 +49,7 @@ model BlogPost {
   likes     PostLike[]
   tags      Tag[]      @relation("PostTags")
   createdAt DateTime   @default(now())
-  changedAt DateTime   @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Comment {
@@ -57,7 +60,7 @@ model Comment {
   postId    Int
   body      String
   createdAt DateTime @default(now())
-  changedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Tag {
@@ -65,7 +68,7 @@ model Tag {
   name      String     @unique
   posts     BlogPost[] @relation("PostTags")
   createdAt DateTime   @default(now())
-  changedAt DateTime   @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model RefreshToken {
