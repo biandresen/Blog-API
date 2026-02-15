@@ -36,6 +36,9 @@ model User {
   resetPasswordTokens ResetPasswordToken[]
   termsAcceptedAt     DateTime?
   termsVersion        String?
+  dailyJokeStreak     Int                  @default(0)
+  dailyJokeLastViewedAt DateTime?
+  dailyJokeBestStreak Int                  @default(0)
 }
 
 model BlogPost {

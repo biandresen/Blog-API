@@ -1,5 +1,15 @@
 import prisma from "../config/prismaClient.js";
 
+const INCLUDED_IN_USER = Object.freeze({
+  id: true,
+  username: true,
+  role: true,
+  avatar: true,
+  dailyJokeStreak: true,
+  dailyJokeBestStreak: true,
+});
+
+
 async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
   const parsedLimit = parseInt(limit) || 100;
@@ -38,20 +48,12 @@ async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } =
         },
         include: {
           user: {
-            select: {
-              id: true,
-              username: true,
-              avatar: true,
-            },
+            select: INCLUDED_IN_USER
           },
         },
       },
       user: {
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
-        },
+        select: INCLUDED_IN_USER
       },
     },
   });
@@ -82,13 +84,18 @@ async function getAllDrafts({ page = 1, limit = 100, sort = "desc", tag = null }
     take: parsedLimit,
     include: {
       tags: true,
-      comments: true,
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
+      comments: {
+        orderBy: {
+          createdAt: "asc",
         },
+        include: {
+          user: {
+            select: INCLUDED_IN_USER
+          },
+        },
+      },
+      user: {
+        select: INCLUDED_IN_USER
       },
     },
   });
@@ -130,13 +137,18 @@ async function getAllPostsByAuthor(
           },
         },
       },
-      comments: true,
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
+      comments: {
+        orderBy: {
+          createdAt: "asc",
         },
+        include: {
+          user: {
+            select: INCLUDED_IN_USER
+          },
+        },
+      },
+      user: {
+        select: INCLUDED_IN_USER
       },
     },
   });
@@ -161,15 +173,17 @@ async function getPostById(postId, { published } = {}) {
         },
       },
       comments: {
-        include: {
-          user: { select: { id: true, username: true, avatar: true } },
-        }},
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
+        orderBy: {
+          createdAt: "asc",
         },
+        include: {
+          user: {
+            select: INCLUDED_IN_USER
+          },
+        },
+      },
+      user: {
+        select: INCLUDED_IN_USER
       },
     },
   });
@@ -197,11 +211,16 @@ async function getRandomPost() {
         },
       },
       comments: {
+        orderBy: {
+          createdAt: "asc",
+        },
         include: {
-          user: { select: { id: true, username: true, avatar: true } },
+          user: {
+            select: INCLUDED_IN_USER
+          },
         },
       },
-      user: { select: { id: true, username: true, avatar: true } },
+      user: { select: INCLUDED_IN_USER },
     },
   });
 
@@ -239,11 +258,16 @@ async function getDailyPost() {
         },
       },
       comments: {
+        orderBy: {
+          createdAt: "asc",
+        },
         include: {
-          user: { select: { id: true, username: true, avatar: true } },
+          user: {
+            select: INCLUDED_IN_USER
+          },
         },
       },
-      user: { select: { id: true, username: true, avatar: true } },
+      user: { select: INCLUDED_IN_USER },
     },
   });
 
@@ -293,17 +317,21 @@ async function updatePost(postId, { title, body, published, tags }) {
     data: updateData,
     include: {
       tags: true,
-      user: { select: { id: true, username: true, avatar: true, role: true } }, // adjust fields to your schema
+      user: { select: INCLUDED_IN_USER},
       likes: {
         include: {
           user: { select: { id: true, username: true } },
         },
       },
       comments: {
-        include: {
-          user: { select: { id: true, username: true, avatar: true } },
+        orderBy: {
+          createdAt: "asc",
         },
-        orderBy: { createdAt: "asc" }, // optional
+        include: {
+          user: {
+            select: INCLUDED_IN_USER
+          },
+        },
       },
     },
   });
@@ -391,10 +419,7 @@ async function searchPosts(searchParameters, { page = 1, limit = 100, sort = "de
     include: {
       tags: true,
       user: {
-        select: {
-          id: true,
-          username: true,
-        },
+        select: INCLUDED_IN_USER
       },
       comments: {
         orderBy: {
@@ -405,11 +430,7 @@ async function searchPosts(searchParameters, { page = 1, limit = 100, sort = "de
           body: true,
           createdAt: true,
           user: {
-            select: {
-              id: true,
-              username: true,
-              avatar: true,
-            },
+            select: INCLUDED_IN_USER
           },
         },
       },
@@ -446,13 +467,17 @@ async function getPopularPosts({ limit = 10, tag = null } = {}) {
         },
       },
       comments: {
-        orderBy: { createdAt: "asc" },
+        orderBy: {
+          createdAt: "asc",
+        },
         include: {
-          user: { select: { id: true, username: true, avatar: true } },
+          user: {
+            select: INCLUDED_IN_USER
+          },
         },
       },
       user: {
-        select: { id: true, username: true, avatar: true },
+        select: INCLUDED_IN_USER
       },
     },
   });

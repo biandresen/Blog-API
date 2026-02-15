@@ -1,8 +1,11 @@
 import { matchedData } from "express-validator";
 import postService from "../services/postService.js";
+import userService from "../services/userService.js";
 import CustomError from "../utils/CustomError.js";
 import normalizeTags from "../utils/normalizeTags.js";
 import successResponse from "../utils/successResponse.js";
+import { toClientUser } from "../utils/toClientUser.js";
+import { isSameUtcDay, isYesterdayUtc } from "../utils/date.js";
 
 async function getAllPosts(req, res, next) {
   const queryParams = matchedData(req);
@@ -181,7 +184,7 @@ async function toggleLike(req, res, next) {
   const postId = Number(req.params?.id);
   if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  const post = postService.getPostById(postId);
+  const post = await postService.getPostById(postId);
   if (!post) return next(new CustomError(404, `No post with id ${postId} found`));
 
   const existing = await postService.hasLiked(postId, userId);
@@ -195,12 +198,59 @@ async function toggleLike(req, res, next) {
   }
 }
 
+async function recordDailyJokeView(req, res, next) {
+  const currentUser = req.user;
+  if (!currentUser?.id) return next(new CustomError(401, "Unauthorized. Please log in."));
+
+  const userId = Number(currentUser.id);
+  const user = await userService.getUserById(userId);
+  if (!user) return next(new CustomError(404, "User not found"));
+  if (!user.active) return next(new CustomError(403, "User is inactive"));
+
+  const now = new Date();
+  const last = user.dailyJokeLastViewedAt;
+
+  let newStreak = user.dailyJokeStreak ?? 0;
+
+  if (!last) {
+    newStreak = 1;
+  } else if (isSameUtcDay(last, now)) {
+    // already viewed today => do nothing
+    newStreak = user.dailyJokeStreak ?? 0;
+  } else if (isYesterdayUtc(last, now)) {
+    newStreak = (user.dailyJokeStreak ?? 0) + 1;
+  } else {
+    newStreak = 1;
+  }
+
+  const best = Math.max(user.dailyJokeBestStreak ?? 0, newStreak);
+
+  const updated = await userService.updateUser(userId, {
+    dailyJokeStreak: newStreak,
+    dailyJokeBestStreak: best,
+    dailyJokeLastViewedAt: now,
+  });
+
+  const clientUser = toClientUser(updated);
+
+  return successResponse(res, 200, "Daily joke view recorded", {
+    dailyJokeStreak: clientUser.dailyJokeStreak,
+    dailyJokeBestStreak: clientUser.dailyJokeBestStreak,
+    dailyJokeLastViewedAt: clientUser.dailyJokeLastViewedAt,
+    user: clientUser, // optional; convenient for frontend state refresh
+  });
+}
+
+
+
+
 export default {
   getAllPostsFromUser,
   getAllPosts,
   getPopularPosts,
   getRandomPost,
   getDailyPost,
+  recordDailyJokeView,
   getPost,
   createPost,
   updatePost,

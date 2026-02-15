@@ -28,6 +28,13 @@ router.get("/random", asyncErrorHandler(postController.getRandomPost));
 
 router.get("/daily", asyncErrorHandler(postController.getDailyPost));
 
+router.post(
+  "/daily/view",
+  isAuthenticated,
+  asyncErrorHandler(postController.recordDailyJokeView)
+);
+
+
 router.get(
   "/drafts",
   isAuthenticated,

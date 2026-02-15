@@ -48,6 +48,10 @@ async function updateUser(userId, updateData = {}) {
   if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
   if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
   if (updateData.avatar !== undefined) fieldsToUpdate.avatar = updateData.avatar;
+  if (updateData.dailyJokeStreak !== undefined) fieldsToUpdate.dailyJokeStreak = updateData.dailyJokeStreak;
+  if (updateData.dailyJokeBestStreak !== undefined) fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
+  if (updateData.dailyJokeLastViewedAt !== undefined) fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
+
 
   return await prisma.user.update({
     where: { id: userId },

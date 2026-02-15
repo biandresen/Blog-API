@@ -107,6 +107,7 @@ app.use("/api/v1/user", routes.userRouter);
 app.use("/api/v1/posts", routes.postRouter);
 app.use("/api/v1/comments", routes.commentRouter);
 app.use("/api/v1/tags", routes.tagRouter);
+app.use("/api/v1/leaderboard", routes.leaderboardRouter);
 
 // ----------------------------
 // UNHANDLED ROUTES

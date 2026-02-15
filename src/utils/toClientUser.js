@@ -8,6 +8,9 @@ export function toClientUser(user) {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     termsAcceptedAt: user.termsAcceptedAt,
-    termsVersion: user.termsVersion
+    termsVersion: user.termsVersion,
+    dailyJokeStreak: user.dailyJokeStreak,
+    dailyJokeBestStreak: user.dailyJokeBestStreak,
+    dailyJokeLastViewedAt: user.dailyJokeLastViewedAt,
   };
 }
