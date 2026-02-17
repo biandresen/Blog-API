@@ -47,30 +47,56 @@ export async function awardJokeOfTheDayToAuthor({ authorId, postId, dayUtc }) {
   });
 }
 
-async function getBadgeHistoryForUser(userId, { page = 1, limit = 50 } = {}) {
-  const take = Math.min(Number(limit) || 50, 100);
-  const skip = (Number(page) - 1) * take;
+// async function getBadgeHistoryForUser(userId, { page = 1, limit = 50 } = {}) {
+//   const take = Math.min(Number(limit) || 50, 100);
+//   const skip = (Number(page) - 1) * take;
 
-  const [items, count] = await Promise.all([
+//   const [items, count] = await Promise.all([
+//     prisma.badgeAward.findMany({
+//       where: { userId },
+//       orderBy: [{ awardedAt: "desc" }],
+//       skip,
+//       take,
+
+//     }),
+//     prisma.badgeAward.count({ where: { userId } }),
+//   ]);
+
+//   return { items, count };
+// }
+
+async function getBadgeHistoryForUser(userId, { page = 1, limit = 15 }) {
+  const p = Math.max(1, Number(page) || 1);
+  const l = Math.max(1, Number(limit) || 15);
+  const skip = (p - 1) * l;
+
+  const [items, total] = await Promise.all([
     prisma.badgeAward.findMany({
       where: { userId },
-      orderBy: [{ awardedAt: "desc" }],
+      orderBy: { awardedAt: "desc" },
       skip,
-      take,
-      select: {
-        id: true,
-        badge: true,
-        awardedAt: true,
-        validFrom: true,
-        validTo: true,
-        context: true,
-      },
+      take: l,
     }),
     prisma.badgeAward.count({ where: { userId } }),
   ]);
 
-  return { items, count };
+  const totalPages = Math.max(1, Math.ceil(total / l));
+
+  return {
+    items,
+    total,
+    meta: {
+      page: p,
+      limit: l,
+      total,
+      totalPages,
+      hasPrev: p > 1,
+      hasNext: p < totalPages,
+    },
+  };
 }
+
+
 
 export default {
   awardJokeOfTheDayToAuthor,

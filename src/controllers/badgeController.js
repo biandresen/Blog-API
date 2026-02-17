@@ -16,19 +16,15 @@ async function getMyCurrentBadges(req, res, next) {
 }
 
 async function getMyBadgeHistory(req, res, next) {
-  const currentUser = req.user;
-  if (!currentUser?.id) return next(new CustomError(401, "Unauthorized. Please log in."));
+  const userId = Number(req.user?.id);
+  const page = req.query.page;
+  const limit = req.query.limit;
 
-  const userId = Number(currentUser.id);
-  if (Number.isNaN(userId)) return next(new CustomError(400, "Invalid user id"));
+  const { items, total, meta } = await badgeService.getBadgeHistoryForUser(userId, { page, limit });
 
-  const page = Number(req.query.page ?? 1);
-  const limit = Number(req.query.limit ?? 50);
-
-  const { items, count } = await badgeService.getBadgeHistoryForUser(userId, { page, limit });
-
-  return successResponse(res, 200, "Badge history retrieved", items, count);
+  return successResponse(res, 200, "Badge history retrieved", items, items.length, meta);
 }
+
 
 
 export default {
