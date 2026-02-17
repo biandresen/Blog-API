@@ -18,6 +18,65 @@ enum Role {
   USER
 }
 
+enum FeatureType {
+  DAILY_JOKE
+  // later: TRENDING_WEEK, TOP_CREATOR_MONTH, etc.
+}
+
+enum BadgeKey {
+  ADMIN
+  TOP_CREATOR_MONTH
+  JOKE_OF_DAY
+  TRENDING_WEEK
+  MOST_COMMENTED
+  FASTEST_GROWING
+  STREAK
+}
+
+model BadgeAward {
+  id        String   @id @default(uuid())
+  userId    Int
+  badge     BadgeKey
+  awardedAt DateTime @default(now())
+  validFrom DateTime?
+  validTo   DateTime?
+  context   Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badge, validFrom])
+  @@index([userId, awardedAt])
+  @@index([badge, awardedAt])
+}
+
+model CurrentUserBadge {
+  id      String   @id @default(uuid())
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  Int
+
+  badge   BadgeKey
+  since   DateTime @default(now())
+  validTo DateTime?
+  context Json?
+
+  @@unique([userId, badge])
+  @@index([badge])
+}
+
+
+model FeaturedPost {
+  id        Int         @id @default(autoincrement())
+  type      FeatureType
+  date      DateTime    // store day as midnight UTC
+  postId    Int
+  post      BlogPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([type, date])
+  @@index([date])
+  @@index([postId])
+}
+
 model User {
   id                  Int                  @id @default(autoincrement())
   username            String               @unique
@@ -39,6 +98,8 @@ model User {
   dailyJokeStreak     Int                  @default(0)
   dailyJokeLastViewedAt DateTime?
   dailyJokeBestStreak Int                  @default(0)
+  currentBadges CurrentUserBadge[]
+  badgeAwards   BadgeAward[]
 }
 
 model BlogPost {
@@ -52,8 +113,11 @@ model BlogPost {
   likes     PostLike[]
   tags      Tag[]      @relation("PostTags")
   createdAt DateTime   @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  updatedAt DateTime   @default(now()) @updatedAt
+
+  featuredIn FeaturedPost[]
 }
+
 
 model Comment {
   id        Int      @id @default(autoincrement())
@@ -64,6 +128,8 @@ model Comment {
   body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([postId, createdAt])
 }
 
 model Tag {
@@ -97,10 +163,14 @@ model ResetPasswordToken {
 }
 
 model PostLike {
-  postId Int
-  userId Int
-  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }

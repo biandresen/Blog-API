@@ -19,11 +19,13 @@ async function getMe(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(401, "Invalid token payload."));
 
   const user = await userService.getUserById(userId);
+
   if (!user) return next(new CustomError(404, "User not found"));
 
   const clientUser = toClientUser(user);
   return successResponse(res, 200, "User retrieved successfully", clientUser);
 }
+
 
 async function getUserProfile(req, res, next) {
   const userId = parseInt(req.params?.id);

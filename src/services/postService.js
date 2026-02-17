@@ -1,14 +1,10 @@
 import prisma from "../config/prismaClient.js";
+import { Prisma } from "@prisma/client";
 
-const INCLUDED_IN_USER = Object.freeze({
-  id: true,
-  username: true,
-  role: true,
-  avatar: true,
-  dailyJokeStreak: true,
-  dailyJokeBestStreak: true,
-});
-
+import { FEATURED_POST, INCLUDED_IN_USER } from "../constants.js";
+import { startOfUtcDay } from "../utils/date.js";
+import { deterministicIndex } from "../utils/deterministicIndex.js";
+import badgeService from "./badgeService.js";
 
 async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
@@ -228,51 +224,59 @@ async function getRandomPost() {
 }
 
 async function getDailyPost() {
-  const count = await prisma.blogPost.count({
-    where: { published: true },
+  const dayUtc = startOfUtcDay(new Date());
+
+  // 1) Already selected today?
+  const existing = await prisma.featuredPost.findUnique({
+    where: { type_date: { type: FEATURED_POST.DAILY, date: dayUtc } },
+    select: { postId: true },
   });
 
-  if (count === 0) return null;
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  let hash = 0;
-
-  // Hashing for deterministic selection | Same post every day for everyone
-  for (let i = 0; i < today.length; i++) {
-    hash = today.charCodeAt(i) + ((hash << 5) - hash);
+  if (existing?.postId) {
+    // optional safety: ensure badge exists (idempotent anyway)
+    // await badgeService.awardJokeOfTheDayToAuthor({ ... }) would require authorId;
+    // to avoid extra query, you can skip this here.
+    return getPostById(existing.postId);
   }
 
-  const index = Math.abs(hash) % count;
+  // 2) Deterministic pick
+  const count = await prisma.blogPost.count({ where: { published: true } });
+  if (count === 0) return null;
 
-  const [post] = await prisma.blogPost.findMany({
+  const index = deterministicIndex(dayUtc, count);
+
+  const picked = await prisma.blogPost.findMany({
     where: { published: true },
     orderBy: { id: "asc" },
     skip: index,
     take: 1,
-    include: {
-      tags: true,
-      likes: {
-        include: {
-          user: { select: { id: true, username: true } },
-        },
-      },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
-      user: { select: INCLUDED_IN_USER },
-    },
+    select: { id: true, authorId: true },
   });
 
-  return post ?? null;
+  const post = picked[0];
+  if (!post) return null;
+
+  // 3) Persist selection + award badge once/day
+  try {
+    await prisma.featuredPost.create({
+      data: { type: FEATURED_POST.DAILY, date: dayUtc, postId: post.id },
+    });
+
+    await badgeService.awardJokeOfTheDayToAuthor({
+      authorId: post.authorId,
+      postId: post.id,
+      dayUtc,
+    });
+  } catch (e) {
+    // If another request created it first
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) {
+      throw e;
+    }
+  }
+
+  return getPostById(post.id);
 }
+
 
 
 async function createPost(authorId, title = "Title", body = "Body...", published = false, tags = []) {

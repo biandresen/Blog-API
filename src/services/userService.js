@@ -1,8 +1,16 @@
 import prisma from "../config/prismaClient.js";
 
 async function getUserById(id) {
-  return await prisma.user.findFirst({ where: { id, active: true } });
+  return await prisma.user.findFirst({
+    where: { id, active: true },
+    include: {
+      currentBadges: {
+        select: { id: true, badge: true, since: true, validTo: true, context: true },
+      },
+    },
+  });
 }
+
 
 async function getUserByUsername(username) {
   console.log(username);
@@ -52,10 +60,12 @@ async function updateUser(userId, updateData = {}) {
   if (updateData.dailyJokeBestStreak !== undefined) fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
   if (updateData.dailyJokeLastViewedAt !== undefined) fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
 
-
   return await prisma.user.update({
     where: { id: userId },
     data: fieldsToUpdate,
+    include: {
+      currentBadges: true,
+    },
   });
 }
 

@@ -12,5 +12,16 @@ export function toClientUser(user) {
     dailyJokeStreak: user.dailyJokeStreak,
     dailyJokeBestStreak: user.dailyJokeBestStreak,
     dailyJokeLastViewedAt: user.dailyJokeLastViewedAt,
+
+    currentBadges: (user.currentBadges ?? []).map((b) => ({
+      id: b.id,
+      badge: b.badge,
+      since: b.since,
+      validTo: b.validTo,
+      context: b.context,
+    })),
+
   };
 }
+
+// currentBadges: user.currentBadges ?? [],

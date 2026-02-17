@@ -23,3 +23,19 @@ export const LEGAL_VERSIONS = {
   COOKIES: "1.0",
   RULES: "1.0",
 };
+
+export const FEATURED_POST = {
+  DAILY: "DAILY_JOKE"
+}
+
+export const INCLUDED_IN_USER = Object.freeze({
+  id: true,
+  username: true,
+  role: true,
+  avatar: true,
+  dailyJokeStreak: true,
+  dailyJokeBestStreak: true,
+  currentBadges: {
+    select: { id: true, badge: true, since: true, validTo: true, context: true },
+  },
+});
