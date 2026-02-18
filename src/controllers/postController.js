@@ -6,20 +6,35 @@ import normalizeTags from "../utils/normalizeTags.js";
 import successResponse from "../utils/successResponse.js";
 import { toClientUser } from "../utils/toClientUser.js";
 import { isSameUtcDay, isYesterdayUtc } from "../utils/date.js";
+import { buildPageMeta } from "../utils/paginationMeta.js";
+
+// async function getAllPosts(req, res, next) {
+//   const queryParams = matchedData(req);
+
+//   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+
+//   const posts = await postService.getAllPosts(queryParams);
+
+//   const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
+//   const data = posts.length > 0 ? posts : [];
+//   const count = posts.length;
+
+//   successResponse(res, 200, message, data, count);
+// }
+
 
 async function getAllPosts(req, res, next) {
   const queryParams = matchedData(req);
-
   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  const posts = await postService.getAllPosts(queryParams);
+  const { items, total, page, limit } = await postService.getAllPosts(queryParams);
 
-  const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
-  const data = posts.length > 0 ? posts : [];
-  const count = posts.length;
+  const meta = buildPageMeta({ page, limit, total });
 
-  successResponse(res, 200, message, data, count);
+  const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
+  return successResponse(res, 200, message, items, items.length, meta);
 }
+
 
 async function getPopularPosts(req, res, next) {
   const posts = await postService.getPopularPosts();
@@ -52,17 +67,16 @@ async function getAllPostsFromUser(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
   const queryParams = matchedData(req);
-
   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  const posts = await postService.getAllPostsByAuthor(userId, queryParams); //Only getting published posts by default
+  const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, queryParams);
 
-  const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found for this user";
-  const data = posts.length > 0 ? posts : [];
-  const count = posts.length;
+  const meta = buildPageMeta({ page, limit, total });
 
-  successResponse(res, 200, message, data, count);
+  const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found for this user";
+  return successResponse(res, 200, message, items, items.length, meta);
 }
+
 
 async function getPost(req, res, next) {
   const postId = Number(req.params?.id);
@@ -112,23 +126,39 @@ async function deletePost(req, res, next) {
   successResponse(res, 200, "Post successfully deleted");
 }
 
+// async function getAllDraftsFromCurrentUser(req, res, next) {
+//   const userId = Number(req.user?.id);
+//   if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
+
+//   const queryParams = matchedData(req);
+
+//   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+
+//   queryParams.published = false;
+
+//   const drafts = await postService.getAllPostsByAuthor(userId, queryParams);
+
+//   const message = drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
+//   const data = drafts.length > 0 ? drafts : [];
+//   const count = drafts.length;
+
+//   successResponse(res, 200, message, data, count);
+// }
+
 async function getAllDraftsFromCurrentUser(req, res, next) {
   const userId = Number(req.user?.id);
   if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
 
   const queryParams = matchedData(req);
-
   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
-
   queryParams.published = false;
 
-  const drafts = await postService.getAllPostsByAuthor(userId, queryParams);
+  const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, queryParams);
 
-  const message = drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
-  const data = drafts.length > 0 ? drafts : [];
-  const count = drafts.length;
+  const meta = buildPageMeta({ page, limit, total }); // {page,limit,total,totalPages,hasNext,hasPrev}
 
-  successResponse(res, 200, message, data, count);
+  const message = items.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
+  return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function getAllDrafts(req, res, next) {

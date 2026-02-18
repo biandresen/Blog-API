@@ -6,54 +6,101 @@ import { startOfUtcDay } from "../utils/date.js";
 import { deterministicIndex } from "../utils/deterministicIndex.js";
 import badgeService from "./badgeService.js";
 
-async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } = {}) {
-  const parsedPage = parseInt(page) || 1;
-  const parsedLimit = parseInt(limit) || 100;
+// async function getAllPosts({ page = 1, limit = 100, sort = "asc", tag = null } = {}) {
+//   const parsedPage = parseInt(page) || 1;
+//   const parsedLimit = parseInt(limit) || 100;
+//   const skip = (parsedPage - 1) * parsedLimit;
+
+//   return await prisma.blogPost.findMany({
+//     where: {
+//       published: true,
+//       ...(tag?.length && {
+//         tags: {
+//           some: {
+//             name: {
+//               in: tag,
+//             },
+//           },
+//         },
+//       }),
+//     },
+//     orderBy: {
+//       createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+//     },
+//     skip,
+//     take: parsedLimit,
+//     include: {
+//       tags: true,
+//       likes: {
+//         include: {
+//           user: {
+//             select: { id: true, username: true },
+//           },
+//         },
+//       },
+//       comments: {
+//         orderBy: {
+//           createdAt: "asc",
+//         },
+//         include: {
+//           user: {
+//             select: INCLUDED_IN_USER
+//           },
+//         },
+//       },
+//       user: {
+//         select: INCLUDED_IN_USER
+//       },
+//     },
+//   });
+// }
+
+async function getAllPosts({ page = 1, limit = 15, sort = "asc", tag = null } = {}) {
+  const parsedPage = Math.max(1, parseInt(page) || 1);
+  const parsedLimit = Math.max(1, parseInt(limit) || 15);
   const skip = (parsedPage - 1) * parsedLimit;
 
-  return await prisma.blogPost.findMany({
-    where: {
-      published: true,
-      ...(tag?.length && {
-        tags: {
-          some: {
-            name: {
-              in: tag,
-            },
-          },
-        },
-      }),
-    },
-    orderBy: {
-      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
-    },
-    skip,
-    take: parsedLimit,
-    include: {
-      tags: true,
-      likes: {
-        include: {
-          user: {
-            select: { id: true, username: true },
-          },
+  const where = {
+    published: true,
+    ...(tag?.length && {
+      tags: {
+        some: {
+          name: { in: tag },
         },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
+    }),
+  };
+
+  const orderBy = {
+    createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: {
+        tags: true,
+        likes: {
+          include: {
+            user: { select: { id: true, username: true } },
           },
         },
+        comments: {
+          orderBy: { createdAt: "asc" },
+          include: { user: { select: INCLUDED_IN_USER } },
+        },
+        user: { select: INCLUDED_IN_USER },
       },
-      user: {
-        select: INCLUDED_IN_USER
-      },
-    },
-  });
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
+
+  return { items, total, page: parsedPage, limit: parsedLimit };
 }
+
 
 async function getAllDrafts({ page = 1, limit = 100, sort = "desc", tag = null } = {}) {
   const parsedPage = parseInt(page) || 1;
@@ -97,58 +144,107 @@ async function getAllDrafts({ page = 1, limit = 100, sort = "desc", tag = null }
   });
 }
 
+// async function getAllPostsByAuthor(
+//   authorId,
+//   { page = 1, limit = 100, sort = "desc", tag = null, published = true } = {}
+// ) {
+//   const parsedPage = parseInt(page) || 1;
+//   const parsedLimit = parseInt(limit) || 100;
+//   const skip = (parsedPage - 1) * parsedLimit;
+
+//   return await prisma.blogPost.findMany({
+//     where: {
+//       authorId,
+//       ...(typeof published === "boolean" && { published }),
+//       ...(tag?.length && {
+//         tags: {
+//           some: {
+//             name: {
+//               in: tag,
+//             },
+//           },
+//         },
+//       }),
+//     },
+//     orderBy: {
+//       createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+//     },
+//     skip,
+//     take: parsedLimit,
+//     include: {
+//       tags: true,
+//       likes: {
+//         include: {
+//           user: {
+//             select: { id: true, username: true },
+//           },
+//         },
+//       },
+//       comments: {
+//         orderBy: {
+//           createdAt: "asc",
+//         },
+//         include: {
+//           user: {
+//             select: INCLUDED_IN_USER
+//           },
+//         },
+//       },
+//       user: {
+//         select: INCLUDED_IN_USER
+//       },
+//     },
+//   });
+// }
+
 async function getAllPostsByAuthor(
   authorId,
-  { page = 1, limit = 100, sort = "desc", tag = null, published = true } = {}
+  { page = 1, limit = 15, sort = "desc", tag = null, published = true } = {}
 ) {
-  const parsedPage = parseInt(page) || 1;
-  const parsedLimit = parseInt(limit) || 100;
+  const parsedPage = Math.max(1, parseInt(page) || 1);
+  const parsedLimit = Math.max(1, parseInt(limit) || 15);
   const skip = (parsedPage - 1) * parsedLimit;
 
-  return await prisma.blogPost.findMany({
-    where: {
-      authorId,
-      ...(typeof published === "boolean" && { published }),
-      ...(tag?.length && {
-        tags: {
-          some: {
-            name: {
-              in: tag,
-            },
+  const where = {
+    authorId,
+    ...(typeof published === "boolean" && { published }),
+    ...(tag?.length && {
+      tags: {
+        some: { name: { in: tag } },
+      },
+    }),
+  };
+
+  const orderBy = {
+    createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: {
+        tags: true,
+        likes: {
+          include: {
+            user: { select: { id: true, username: true } },
           },
         },
-      }),
-    },
-    orderBy: {
-      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
-    },
-    skip,
-    take: parsedLimit,
-    include: {
-      tags: true,
-      likes: {
-        include: {
-          user: {
-            select: { id: true, username: true },
-          },
+        comments: {
+          orderBy: { createdAt: "asc" },
+          include: { user: { select: INCLUDED_IN_USER } },
         },
+        user: { select: INCLUDED_IN_USER },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
-      user: {
-        select: INCLUDED_IN_USER
-      },
-    },
-  });
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
+
+  return { items, total, page: parsedPage, limit: parsedLimit };
 }
+
 
 async function getPostById(postId, { published } = {}) {
   const whereClause = { id: postId };
