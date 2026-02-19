@@ -321,28 +321,41 @@ async function getRandomPost() {
 
 async function getDailyPost() {
   const dayUtc = startOfUtcDay(new Date());
+  const yesterdayUtc = startOfUtcDay(new Date(dayUtc.getTime() - 24 * 60 * 60 * 1000));
 
   // 1) Already selected today?
   const existing = await prisma.featuredPost.findUnique({
     where: { type_date: { type: FEATURED_POST.DAILY, date: dayUtc } },
     select: { postId: true },
   });
+  if (existing?.postId) return getPostById(existing.postId);
 
-  if (existing?.postId) {
-    // optional safety: ensure badge exists (idempotent anyway)
-    // await badgeService.awardJokeOfTheDayToAuthor({ ... }) would require authorId;
-    // to avoid extra query, you can skip this here.
-    return getPostById(existing.postId);
-  }
+  // 2) Get yesterday's selected postId (if any)
+  const yesterday = await prisma.featuredPost.findUnique({
+    where: { type_date: { type: FEATURED_POST.DAILY, date: yesterdayUtc } },
+    select: { postId: true },
+  });
+  const yesterdayPostId = yesterday?.postId ?? null;
 
-  // 2) Deterministic pick
-  const count = await prisma.blogPost.count({ where: { published: true } });
-  if (count === 0) return null;
+  // 3) Count published posts (optionally excluding yesterday)
+  const whereBase = { published: true };
+  const whereExcludingYesterday =
+    yesterdayPostId != null ? { ...whereBase, id: { not: yesterdayPostId } } : whereBase;
 
-  const index = deterministicIndex(dayUtc, count);
+  // If we can exclude yesterday, do it. If not (e.g. only 1 post), fall back.
+  const totalExcl = await prisma.blogPost.count({ where: whereExcludingYesterday });
+  const canExcludeYesterday = yesterdayPostId != null && totalExcl > 0;
+
+  const finalWhere = canExcludeYesterday ? whereExcludingYesterday : whereBase;
+  const total = canExcludeYesterday ? totalExcl : await prisma.blogPost.count({ where: whereBase });
+
+  if (total === 0) return null;
+
+  // 4) Deterministic pick (now on the filtered set if possible)
+  const index = deterministicIndex(dayUtc, total);
 
   const picked = await prisma.blogPost.findMany({
-    where: { published: true },
+    where: finalWhere,
     orderBy: { id: "asc" },
     skip: index,
     take: 1,
@@ -352,7 +365,7 @@ async function getDailyPost() {
   const post = picked[0];
   if (!post) return null;
 
-  // 3) Persist selection + award badge once/day
+  // 5) Persist selection + award badge once/day
   try {
     await prisma.featuredPost.create({
       data: { type: FEATURED_POST.DAILY, date: dayUtc, postId: post.id },
@@ -361,10 +374,9 @@ async function getDailyPost() {
     await badgeService.awardJokeOfTheDayToAuthor({
       authorId: post.authorId,
       postId: post.id,
-      dayUtc,
+      dayUtc, // keep naming consistent
     });
   } catch (e) {
-    // If another request created it first
     if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) {
       throw e;
     }
@@ -372,6 +384,7 @@ async function getDailyPost() {
 
   return getPostById(post.id);
 }
+
 
 
 
