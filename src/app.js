@@ -108,6 +108,7 @@ app.use("/api/v1/posts", routes.postRouter);
 app.use("/api/v1/comments", routes.commentRouter);
 app.use("/api/v1/tags", routes.tagRouter);
 app.use("/api/v1/badges", routes.badgeRouter);
+app.use("/api/v1/featured", routes.featuredRouter);
 
 // ----------------------------
 // UNHANDLED ROUTES

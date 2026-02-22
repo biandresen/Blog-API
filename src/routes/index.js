@@ -3,7 +3,8 @@ import userRouter from "./userRouter.js";
 import postRouter from "./postRouter.js";
 import commentRouter from "./commentRouter.js";
 import tagRouter from "./tagRouter.js";
-import badgeRouter from "./badgeRoutes.js"
+import badgeRouter from "./badgeRouter.js"
+import featuredRouter from "./featuredRouter.js"
 
 export default {
   authRouter,
@@ -12,4 +13,5 @@ export default {
   commentRouter,
   tagRouter,
   badgeRouter,
+  featuredRouter,
 };
