@@ -183,28 +183,58 @@ async function publishDraft(req, res, next) {
   successResponse(res, 200, "Draft successfully published", publishedDraft);
 }
 
+// async function searchPosts(req, res, next) {
+//   const { searchParameters, page, limit, sort } = matchedData(req);
+
+//   if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
+//     return successResponse(res, 400, "No search parameters were given", []); //Not success, but same structure.
+//   }
+
+//   const arrayOfSearchParams = searchParameters
+//     .split(/[\s,]+/) // split on spaces or commas
+//     .filter(Boolean); // remove empty strings
+
+//   if (!Array.isArray(arrayOfSearchParams) || arrayOfSearchParams.length === 0) {
+//     return next(new CustomError(400, "Invalid entry of search parameters"));
+//   }
+
+//   const posts = await postService.searchPosts(arrayOfSearchParams, { page, limit, sort });
+
+//   const message = posts.length > 0 ? "Posts retrieved successfully" : "No posts were found";
+//   const data = posts.length > 0 ? posts : [];
+//   const count = posts.length;
+
+//   successResponse(res, 200, message, data, count);
+// }
+
 async function searchPosts(req, res, next) {
   const { searchParameters, page, limit, sort } = matchedData(req);
 
+  // Prefer returning empty results with 200 (UI-friendly)
   if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
-    return successResponse(res, 400, "No search parameters were given", []); //Not success, but same structure.
+    const parsedPage = Math.max(1, parseInt(page) || 1);
+    const parsedLimit = Math.max(1, parseInt(limit) || 15);
+    const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
+    return successResponse(res, 200, "No search parameters were given", [], 0, meta);
   }
 
-  const arrayOfSearchParams = searchParameters
-    .split(/[\s,]+/) // split on spaces or commas
-    .filter(Boolean); // remove empty strings
+  const terms = searchParameters
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  if (!Array.isArray(arrayOfSearchParams) || arrayOfSearchParams.length === 0) {
-    return next(new CustomError(400, "Invalid entry of search parameters"));
+  if (terms.length === 0) {
+    const parsedPage = Math.max(1, parseInt(page) || 1);
+    const parsedLimit = Math.max(1, parseInt(limit) || 15);
+    const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
+    return successResponse(res, 200, "No search parameters were given", [], 0, meta);
   }
 
-  const posts = await postService.searchPosts(arrayOfSearchParams, { page, limit, sort });
+  const { items, total, page: p, limit: l } = await postService.searchPosts(terms, { page, limit, sort });
+  const meta = buildPageMeta({ page: p, limit: l, total });
 
-  const message = posts.length > 0 ? "Posts retrieved successfully" : "No posts were found";
-  const data = posts.length > 0 ? posts : [];
-  const count = posts.length;
-
-  successResponse(res, 200, message, data, count);
+  const message = items.length > 0 ? "Posts retrieved successfully" : "No posts were found";
+  return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function toggleLike(req, res, next) {
@@ -270,9 +300,6 @@ async function recordDailyJokeView(req, res, next) {
     user: clientUser, // optional; convenient for frontend state refresh
   });
 }
-
-
-
 
 export default {
   getAllPostsFromUser,

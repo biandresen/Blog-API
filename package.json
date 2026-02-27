@@ -7,7 +7,10 @@
   "scripts": {
     "start": "NODE_ENV=production node src/server.js",
     "dev": "NODE_ENV=development node --watch src/server.js",
-    "seed": "node src/config/seed.js"
+    "seed": "node src/config/seed.js",
+    "dev:api": "node src/server.js",
+    "dev:worker": "node src/jobs/worker.js",
+    "dev:runOnce": "node src/jobs/runOnce.js"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.11",
     "resend": "^6.5.2",
     "sharp": "^0.34.5"

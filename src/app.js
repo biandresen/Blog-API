@@ -109,6 +109,7 @@ app.use("/api/v1/comments", routes.commentRouter);
 app.use("/api/v1/tags", routes.tagRouter);
 app.use("/api/v1/badges", routes.badgeRouter);
 app.use("/api/v1/featured", routes.featuredRouter);
+app.use("/api/v1/hall-of-fame", routes.hallOfFameRouter);
 
 // ----------------------------
 // UNHANDLED ROUTES
