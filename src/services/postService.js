@@ -88,10 +88,10 @@ async function getAllPosts({ page = 1, limit = 15, sort = "asc", tag = null } = 
             user: { select: { id: true, username: true } },
           },
         },
-        comments: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: INCLUDED_IN_USER } },
-        },
+        // comments: {
+        //   orderBy: { createdAt: "asc" },
+        //   include: { user: { select: INCLUDED_IN_USER } },
+        // },
         user: { select: INCLUDED_IN_USER },
       },
     }),
@@ -127,16 +127,16 @@ async function getAllDrafts({ page = 1, limit = 100, sort = "desc", tag = null }
     take: parsedLimit,
     include: {
       tags: true,
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
+      // comments: {
+      //   orderBy: {
+      //     createdAt: "asc",
+      //   },
+      //   include: {
+      //     user: {
+      //       select: INCLUDED_IN_USER
+      //     },
+      //   },
+      // },
       user: {
         select: INCLUDED_IN_USER
       },
@@ -232,10 +232,10 @@ async function getAllPostsByAuthor(
             user: { select: { id: true, username: true } },
           },
         },
-        comments: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: INCLUDED_IN_USER } },
-        },
+        // comments: {
+        //   orderBy: { createdAt: "asc" },
+        //   include: { user: { select: INCLUDED_IN_USER } },
+        // },
         user: { select: INCLUDED_IN_USER },
       },
     }),
@@ -264,16 +264,16 @@ async function getPostById(postId, { published } = {}) {
           },
         },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
+      // comments: {
+      //   orderBy: {
+      //     createdAt: "asc",
+      //   },
+      //   include: {
+      //     user: {
+      //       select: INCLUDED_IN_USER
+      //     },
+      //   },
+      // },
       user: {
         select: INCLUDED_IN_USER
       },
@@ -302,16 +302,16 @@ async function getRandomPost() {
           user: { select: { id: true, username: true } },
         },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
+      // comments: {
+      //   orderBy: {
+      //     createdAt: "asc",
+      //   },
+      //   include: {
+      //     user: {
+      //       select: INCLUDED_IN_USER
+      //     },
+      //   },
+      // },
       user: { select: INCLUDED_IN_USER },
     },
   });
@@ -434,16 +434,16 @@ async function updatePost(postId, { title, body, published, tags }) {
           user: { select: { id: true, username: true } },
         },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
+      // comments: {
+      //   orderBy: {
+      //     createdAt: "asc",
+      //   },
+      //   include: {
+      //     user: {
+      //       select: INCLUDED_IN_USER
+      //     },
+      //   },
+      // },
     },
   });
 }
@@ -571,11 +571,11 @@ async function searchPosts(
       },
     },
     {
-      comments: {
-        some: {
-          body: { contains: term, mode: "insensitive" },
-        },
-      },
+      // comments: {
+      //   some: {
+      //     body: { contains: term, mode: "insensitive" },
+      //   },
+      // },
     },
   ]);
 
@@ -595,15 +595,15 @@ async function searchPosts(
       include: {
         tags: true,
         user: { select: INCLUDED_IN_USER },
-        comments: {
-          orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            body: true,
-            createdAt: true,
-            user: { select: INCLUDED_IN_USER },
-          },
-        },
+        // comments: {
+        //   orderBy: { createdAt: "asc" },
+        //   select: {
+        //     id: true,
+        //     body: true,
+        //     createdAt: true,
+        //     user: { select: INCLUDED_IN_USER },
+        //   },
+        // },
       },
     }),
     prisma.blogPost.count({ where }),
@@ -640,16 +640,16 @@ async function getPopularPosts({ limit = 10, tag = null } = {}) {
           user: { select: { id: true, username: true } },
         },
       },
-      comments: {
-        orderBy: {
-          createdAt: "asc",
-        },
-        include: {
-          user: {
-            select: INCLUDED_IN_USER
-          },
-        },
-      },
+      // comments: {
+      //   orderBy: {
+      //     createdAt: "asc",
+      //   },
+      //   include: {
+      //     user: {
+      //       select: INCLUDED_IN_USER
+      //     },
+      //   },
+      // },
       user: {
         select: INCLUDED_IN_USER
       },

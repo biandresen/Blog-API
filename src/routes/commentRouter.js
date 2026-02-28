@@ -6,8 +6,16 @@ import commentController from "../controllers/commentController.js";
 import newCommentValidator from "../validation/newCommentValidator.js";
 import checkValidation from "../middleware/checkValidation.js";
 import isCommentAuthor from "../middleware/isCommentAuthor.js";
+import queryParametersValidator from "../validation/queryParametersValidator.js";
 
 const router = Router();
+
+router.get(
+  "/:id",
+  queryParametersValidator,
+  checkValidation,
+  asyncErrorHandler(commentController.getAllCommentsFromPost)
+);
 
 router.patch(
   "/:id",

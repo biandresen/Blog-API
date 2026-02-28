@@ -2,6 +2,7 @@ import { matchedData } from "express-validator";
 import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
 import successResponse from "../utils/successResponse.js";
+import { buildPageMeta } from "../utils/paginationMeta.js";
 
 async function createComment(req, res, next) {
   const postId = Number(req.params?.id);
@@ -15,19 +16,38 @@ async function createComment(req, res, next) {
   successResponse(res, 201, "Comment created successfully", comment);
 }
 
+// async function getAllCommentsFromPost(req, res, next) {
+//   const postId = Number(req.params?.id);
+//   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
+
+//   const queryParams = matchedData(req);
+
+//   const comments = await commentService.getAllCommentsFromPost(postId, queryParams);
+
+//   const message = comments.length > 0 ? "Comments successfully retrieved" : "No comments found";
+//   const data = comments.length > 0 ? comments : [];
+//   const count = comments.length;
+
+//   successResponse(res, 200, message, data, count);
+// }
+
 async function getAllCommentsFromPost(req, res, next) {
   const postId = Number(req.params?.id);
   if (isNaN(postId)) return next(new CustomError(400, "Invalid post id given"));
 
   const queryParams = matchedData(req);
 
-  const comments = await commentService.getAllCommentsFromPost(postId, queryParams);
+  const { items, total, page, limit } =
+    await commentService.getAllCommentsFromPost(postId, queryParams);
 
-  const message = comments.length > 0 ? "Comments successfully retrieved" : "No comments found";
-  const data = comments.length > 0 ? comments : [];
-  const count = comments.length;
+  const meta = buildPageMeta({ page, limit, total });
 
-  successResponse(res, 200, message, data, count);
+  const message =
+    items.length > 0
+      ? "Comments successfully retrieved"
+      : "No comments found";
+
+  return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function deleteComment(req, res, next) {

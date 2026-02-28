@@ -1,4 +1,5 @@
 import prisma from "../config/prismaClient.js";
+import { INCLUDED_IN_USER } from "../constants.js";
 
 async function createComment(postId, authorId, body) {
   return await prisma.comment.create({
@@ -10,27 +11,54 @@ async function createComment(postId, authorId, body) {
   });
 }
 
+// async function getAllCommentsFromPost(postId, { page = 1, limit = 10, sort = "asc" } = {}) {
+//   const parsedPage = parseInt(page) || 1;
+//   const parsedLimit = parseInt(limit) || 10;
+//   const skip = (parsedPage - 1) * parsedLimit;
+
+//   return await prisma.comment.findMany({
+//     where: { postId },
+//     orderBy: {
+//       createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+//     },
+//     skip,
+//     take: parsedLimit,
+//     include: {
+//       user: {
+//         select: {
+//           id: true,
+//           username: true,
+//         },
+//       },
+//     },
+//   });
+// }
+
 async function getAllCommentsFromPost(postId, { page = 1, limit = 10, sort = "asc" } = {}) {
   const parsedPage = parseInt(page) || 1;
   const parsedLimit = parseInt(limit) || 10;
   const skip = (parsedPage - 1) * parsedLimit;
 
-  return await prisma.comment.findMany({
-    where: { postId },
-    orderBy: {
-      createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
-    },
-    skip,
-    take: parsedLimit,
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
+  const where = { postId };
+
+  const [items, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: {
+        createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc",
+      },
+      skip,
+      take: parsedLimit,
+      include: {
+        user: {
+          select: INCLUDED_IN_USER
         },
       },
-    },
-  });
+    }),
+    prisma.comment.count({ where }),
+  ]);
+
+  return { items, total, page: parsedPage, limit: parsedLimit };
 }
 
 async function getCommentById(commentId) {
