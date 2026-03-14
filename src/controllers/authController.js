@@ -83,7 +83,18 @@ async function loginUser(req, res, next) {
 
   res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
 
-  successResponse(res, 200, "Login successful", accessToken);
+  const language = req.language;
+  const fullUser = await userService.getUserById(user.id, { language });
+
+  if (!fullUser) return next(new CustomError(404, "User not found"));
+
+  const clientUser = toClientUser(fullUser);
+  console.log("AUTH: ", clientUser)
+
+  successResponse(res, 200, "Login successful", {
+    accessToken,
+    user: clientUser,
+  });
 }
 
 async function logoutUser(req, res, next) {

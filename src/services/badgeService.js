@@ -1,19 +1,24 @@
 import prisma from "../config/prismaClient.js";
 import { BADGE, FEATURED_POST } from "../constants.js";
+import { normalizeLanguage } from "../utils/language.js";
 
-async function getBadgeHistoryForUser(userId, { page = 1, limit = 15 }) {
+async function getBadgeHistoryForUser(userId, { language, page = 1, limit = 15 } = {}) {
+  const lang = normalizeLanguage(language);
+
   const p = Math.max(1, Number(page) || 1);
   const l = Math.max(1, Number(limit) || 15);
   const skip = (p - 1) * l;
 
+  const where = { userId, language: lang };
+
   const [items, total] = await Promise.all([
     prisma.badgeAward.findMany({
-      where: { userId },
+      where,
       orderBy: { awardedAt: "desc" },
       skip,
       take: l,
     }),
-    prisma.badgeAward.count({ where: { userId } }),
+    prisma.badgeAward.count({ where }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / l));
@@ -32,18 +37,16 @@ async function getBadgeHistoryForUser(userId, { page = 1, limit = 15 }) {
   };
 }
 
-export async function awardJokeOfTheDayToAuthor({ authorId, postId, dayUtc }) {
-  // dayUtc should be midnight UTC
-  // Award history (BadgeAward): one per user per day
-  // Current badge (CurrentUserBadge): ensure user has the badge currently (validTo optional)
+export async function awardJokeOfTheDayToAuthor({ authorId, postId, dayUtc, language }) {
+  const lang = normalizeLanguage(language);
 
-  // 1) History record (idempotent by unique constraint you set: @@unique([userId, badge, validFrom]))
   await prisma.badgeAward.upsert({
     where: {
-      userId_badge_validFrom: {
+      userId_badge_validFrom_language: {
         userId: authorId,
         badge: BADGE.JOKE_OF_DAY,
         validFrom: dayUtc,
+        language: lang,
       },
     },
     update: {},
@@ -51,91 +54,84 @@ export async function awardJokeOfTheDayToAuthor({ authorId, postId, dayUtc }) {
       userId: authorId,
       badge: BADGE.JOKE_OF_DAY,
       validFrom: dayUtc,
-      // validTo optional: dayUtc + 1 day, if you want
-      context: { postId },
+      language: lang,
+      context: { postId, language: lang },
     },
   });
 
-  // 2) Current badge (idempotent by @@unique([userId, badge]))
   await prisma.currentUserBadge.upsert({
     where: {
-      userId_badge: {
+      userId_badge_language: {
         userId: authorId,
         badge: BADGE.JOKE_OF_DAY,
+        language: lang,
       },
     },
     update: {
       since: dayUtc,
-      context: { postId },
+      context: { postId, language: lang },
       validTo: null,
     },
     create: {
       userId: authorId,
       badge: BADGE.JOKE_OF_DAY,
+      language: lang,
       since: dayUtc,
-      context: { postId },
+      context: { postId, language: lang },
       validTo: null,
     },
   });
 }
 
-// async function getBadgeHistoryForUser(userId, { page = 1, limit = 50 } = {}) {
-//   const take = Math.min(Number(limit) || 50, 100);
-//   const skip = (Number(page) - 1) * take;
+export async function awardTopCreatorMonthToUser({
+  userId,
+  monthStartUtc,
+  monthEndUtc,
+  postCount,
+  context,
+  language,
+}) {
+  const lang = normalizeLanguage(language);
 
-//   const [items, count] = await Promise.all([
-//     prisma.badgeAward.findMany({
-//       where: { userId },
-//       orderBy: [{ awardedAt: "desc" }],
-//       skip,
-//       take,
-
-//     }),
-//     prisma.badgeAward.count({ where: { userId } }),
-//   ]);
-
-//   return { items, count };
-// }
-
-export async function awardTopCreatorMonthToUser({ userId, monthStartUtc, monthEndUtc, postCount }) {
-  // history: unique per user+badge+validFrom (your existing unique works)
   await prisma.badgeAward.upsert({
     where: {
-      userId_badge_validFrom: {
+      userId_badge_validFrom_language: {
         userId,
         badge: BADGE.TOP_CREATOR_MONTH,
         validFrom: monthStartUtc,
+        language: lang,
       },
     },
     update: {
       validTo: monthEndUtc,
-      context: { postCount },
+      context: { postCount, ...(context || {}), language: lang },
     },
     create: {
       userId,
       badge: BADGE.TOP_CREATOR_MONTH,
       validFrom: monthStartUtc,
       validTo: monthEndUtc,
-      context: { postCount },
+      language: lang,
+      context: { postCount, ...(context || {}), language: lang },
     },
   });
 
-  // current: unique per user+badge (your existing unique works)
   await prisma.currentUserBadge.upsert({
     where: {
-      userId_badge: { userId, badge: BADGE.TOP_CREATOR_MONTH },
+      userId_badge_language: { userId, badge: BADGE.TOP_CREATOR_MONTH, language: lang },
     },
     update: {
       since: monthStartUtc,
       validTo: monthEndUtc,
-      context: { postCount },
+      context: { postCount, ...(context || {}), language: lang },
     },
     create: {
       userId,
       badge: BADGE.TOP_CREATOR_MONTH,
+      language: lang,
       since: monthStartUtc,
       validTo: monthEndUtc,
-      context: { postCount },
+      context: { postCount, ...(context || {}), language: lang },
     },
   });
 }
@@ -146,46 +142,53 @@ export async function awardMostCommentedWeekToAuthor({
   weekStartUtc,
   weekEndUtc,
   commentCount,
+  language,
 }) {
+  const lang = normalizeLanguage(language);
+
   await prisma.badgeAward.upsert({
     where: {
-      userId_badge_validFrom: {
+      userId_badge_validFrom_language: {
         userId: authorId,
         badge: FEATURED_POST.MOST_COMMENTED_WEEK,
         validFrom: weekStartUtc,
+        language: lang,
       },
     },
     update: {
       validTo: weekEndUtc,
-      context: { postId, commentCount },
+      context: { postId, commentCount, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.MOST_COMMENTED_WEEK,
       validFrom: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, commentCount },
+      language: lang,
+      context: { postId, commentCount, language: lang },
     },
   });
 
   await prisma.currentUserBadge.upsert({
     where: {
-      userId_badge: {
+      userId_badge_language: {
         userId: authorId,
         badge: FEATURED_POST.MOST_COMMENTED_WEEK,
+        language: lang,
       },
     },
     update: {
       since: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, commentCount },
+      context: { postId, commentCount, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.MOST_COMMENTED_WEEK,
+      language: lang,
       since: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, commentCount },
+      context: { postId, commentCount, language: lang },
     },
   });
 }
@@ -196,46 +199,53 @@ export async function awardTrendingWeekToAuthor({
   weekStartUtc,
   weekEndUtc,
   likeCount,
+  language,
 }) {
+  const lang = normalizeLanguage(language);
+
   await prisma.badgeAward.upsert({
     where: {
-      userId_badge_validFrom: {
+      userId_badge_validFrom_language: {
         userId: authorId,
         badge: FEATURED_POST.TRENDING_WEEK,
         validFrom: weekStartUtc,
+        language: lang,
       },
     },
     update: {
       validTo: weekEndUtc,
-      context: { postId, likeCount },
+      context: { postId, likeCount, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.TRENDING_WEEK,
       validFrom: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, likeCount },
+      language: lang,
+      context: { postId, likeCount, language: lang },
     },
   });
 
   await prisma.currentUserBadge.upsert({
     where: {
-      userId_badge: {
+      userId_badge_language: {
         userId: authorId,
         badge: FEATURED_POST.TRENDING_WEEK,
+        language: lang,
       },
     },
     update: {
       since: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, likeCount },
+      context: { postId, likeCount, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.TRENDING_WEEK,
+      language: lang,
       since: weekStartUtc,
       validTo: weekEndUtc,
-      context: { postId, likeCount },
+      context: { postId, likeCount, language: lang },
     },
   });
 }
@@ -246,48 +256,53 @@ export async function awardFastestGrowingToAuthor({
   validFromUtc,
   validToUtc,
   likeCount24h,
+  language,
 }) {
-  // History (idempotent by @@unique([userId, badge, validFrom]))
+  const lang = normalizeLanguage(language);
+
   await prisma.badgeAward.upsert({
     where: {
-      userId_badge_validFrom: {
+      userId_badge_validFrom_language: {
         userId: authorId,
         badge: FEATURED_POST.FASTEST_GROWING,
         validFrom: validFromUtc,
+        language: lang,
       },
     },
     update: {
       validTo: validToUtc,
-      context: { postId, likeCount24h, windowHours: 24 },
+      context: { postId, likeCount24h, windowHours: 24, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.FASTEST_GROWING,
       validFrom: validFromUtc,
       validTo: validToUtc,
-      context: { postId, likeCount24h, windowHours: 24 },
+      language: lang,
+      context: { postId, likeCount24h, windowHours: 24, language: lang },
     },
   });
 
-  // Current badge (idempotent by @@unique([userId, badge]))
   await prisma.currentUserBadge.upsert({
     where: {
-      userId_badge: {
+      userId_badge_language: {
         userId: authorId,
         badge: FEATURED_POST.FASTEST_GROWING,
+        language: lang,
       },
     },
     update: {
       since: validFromUtc,
       validTo: validToUtc,
-      context: { postId, likeCount24h, windowHours: 24 },
+      context: { postId, likeCount24h, windowHours: 24, language: lang },
     },
     create: {
       userId: authorId,
       badge: FEATURED_POST.FASTEST_GROWING,
+      language: lang,
       since: validFromUtc,
       validTo: validToUtc,
-      context: { postId, likeCount24h, windowHours: 24 },
+      context: { postId, likeCount24h, windowHours: 24, language: lang },
     },
   });
 }

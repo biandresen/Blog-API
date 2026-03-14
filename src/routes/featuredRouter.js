@@ -5,6 +5,7 @@ import asyncErrorHandler from "../utils/asyncErrorHandler.js";
 import successResponse from "../utils/successResponse.js";
 import * as featuredService from "../services/featuredService.js";
 import { FeatureType } from "@prisma/client";
+import { readHeavyLimiter } from "../middleware/rateLimiters.js";
 
 const router = Router();
 
@@ -59,8 +60,10 @@ const FEATURE_SLUG_MAP = {
 
 router.get(
   "/:slug",
+  readHeavyLimiter,
   asyncErrorHandler(async (req, res) => {
     const slug = req.params.slug;
+    const language = req.language
     const type = FEATURE_SLUG_MAP[slug];
 
     if (!type) {
@@ -68,7 +71,7 @@ router.get(
       // or throw CustomError(400, "Unknown feature")
     }
 
-    const result = await featuredService.getCurrentFeatured(type);
+    const result = await featuredService.getCurrentFeatured(type, {language});
 
     if (!result?.post) {
       return successResponse(res, 200, "No featured post yet", null);

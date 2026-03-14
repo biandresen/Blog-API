@@ -36,6 +36,10 @@ const updateUserValidator = [
     .withMessage("Password must include at least 1 lowercase, 1 uppercase, 1 number, and 1 symbol"),
 
   body("avatar").optional().isString().withMessage("Avatar must be a valid string URL"),
+  body("preferredLanguage")
+  .optional()
+  .isIn(["NO", "EN"])
+  .withMessage("preferredLanguage must be NO or EN"),
 ];
 
 export default updateUserValidator;

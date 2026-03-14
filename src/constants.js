@@ -39,7 +39,6 @@ export const INCLUDED_IN_USER = Object.freeze({
 export const BADGE = Object.freeze({
   JOKE_OF_DAY: "JOKE_OF_DAY",
   TOP_CREATOR_MONTH: "TOP_CREATOR_MONTH",
-  // later:
   TRENDING_WEEK: "TRENDING_WEEK",
   MOST_COMMENTED: "MOST_COMMENTED",
   FASTEST_GROWING: "FASTEST_GROWING",
@@ -48,8 +47,11 @@ export const BADGE = Object.freeze({
 export const FEATURED_POST = Object.freeze({
   DAILY: "DAILY_JOKE",
   TOP_CREATOR_MONTH: "TOP_CREATOR_MONTH",
-  // later:
   TRENDING_WEEK: "TRENDING_WEEK",
   MOST_COMMENTED_WEEK: "MOST_COMMENTED_WEEK",
   FASTEST_GROWING: "FASTEST_GROWING",
 });
+
+export const DEFAULT_LANGUAGE = "NO";
+export const SUPPORTED_LANGUAGES = Object.freeze(["NO", "EN"]);
+export const SUPPORTED_LANGUAGES_SET = new Set(SUPPORTED_LANGUAGES);

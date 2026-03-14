@@ -11,11 +11,13 @@ import newCommentValidator from "../validation/newCommentValidator.js";
 import searchParametersValidator from "../validation/searchParametersValidator.js";
 import queryParametersValidator from "../validation/queryParametersValidator.js";
 import checkValidation from "../middleware/checkValidation.js";
+import { readHeavyLimiter } from "../middleware/rateLimiters.js";
 
 const router = Router();
 
 router.get(
   "/search",
+  readHeavyLimiter,
   searchParametersValidator,
   queryParametersValidator,
   checkValidation,
@@ -30,6 +32,7 @@ router.get("/daily", asyncErrorHandler(postController.getDailyPost));
 
 router.post(
   "/daily/view",
+  readHeavyLimiter,
   isAuthenticated,
   asyncErrorHandler(postController.recordDailyJokeView)
 );
@@ -37,6 +40,7 @@ router.post(
 
 router.get(
   "/drafts",
+  readHeavyLimiter,
   isAuthenticated,
   queryParametersValidator,
   checkValidation,
@@ -45,6 +49,7 @@ router.get(
 
 router.get(
   "/drafts/all",
+  readHeavyLimiter,
   isAuthenticated,
   isAdmin,
   queryParametersValidator,
@@ -52,12 +57,13 @@ router.get(
   asyncErrorHandler(postController.getAllDrafts)
 );
 
-router.get("/:id", asyncErrorHandler(postController.getPost));
+router.get("/:id",readHeavyLimiter, asyncErrorHandler(postController.getPost));
 
-router.get("/", queryParametersValidator, checkValidation, asyncErrorHandler(postController.getAllPosts));
+router.get("/",readHeavyLimiter, queryParametersValidator, checkValidation, asyncErrorHandler(postController.getAllPosts));
 
 router.patch(
   "/:id/publish",
+  readHeavyLimiter,
   isAuthenticated,
   isPostAuthorOrAdmin,
   asyncErrorHandler(postController.publishDraft)
@@ -65,6 +71,7 @@ router.patch(
 
 router.patch(
   "/:id",
+  readHeavyLimiter,
   isAuthenticated,
   isPostAuthorOrAdmin,
   updatePostValidator,
@@ -72,10 +79,11 @@ router.patch(
   asyncErrorHandler(postController.updatePost)
 );
 
-router.post("/:id/like", isAuthenticated, asyncErrorHandler(postController.toggleLike));
+router.post("/:id/like", readHeavyLimiter, isAuthenticated, asyncErrorHandler(postController.toggleLike));
 
 router.post(
   "/:id/comments",
+  readHeavyLimiter,
   isAuthenticated,
   newCommentValidator,
   checkValidation,
@@ -84,6 +92,7 @@ router.post(
 
 router.get(
   "/:id/comments",
+  readHeavyLimiter,
   queryParametersValidator,
   checkValidation,
   asyncErrorHandler(commentController.getAllCommentsFromPost)
@@ -91,12 +100,13 @@ router.get(
 
 router.post(
   "/",
+  readHeavyLimiter,
   isAuthenticated,
   newPostValidator,
   checkValidation,
   asyncErrorHandler(postController.createPost)
 );
 
-router.delete("/:id", isAuthenticated, isPostAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
+router.delete("/:id", readHeavyLimiter, isAuthenticated, isPostAuthorOrAdmin, asyncErrorHandler(postController.deletePost));
 
 export default router;

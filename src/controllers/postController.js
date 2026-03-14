@@ -8,259 +8,258 @@ import { toClientUser } from "../utils/toClientUser.js";
 import { isSameUtcDay, isYesterdayUtc } from "../utils/date.js";
 import { buildPageMeta } from "../utils/paginationMeta.js";
 
-// async function getAllPosts(req, res, next) {
-//   const queryParams = matchedData(req);
-
-//   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
-
-//   const posts = await postService.getAllPosts(queryParams);
-
-//   const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
-//   const data = posts.length > 0 ? posts : [];
-//   const count = posts.length;
-
-//   successResponse(res, 200, message, data, count);
-// }
-
-
 async function getAllPosts(req, res, next) {
-  const queryParams = matchedData(req);
-  queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+    const language = req.language;
 
-  const { items, total, page, limit } = await postService.getAllPosts(queryParams);
+    const queryParams = matchedData(req);
+    queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  const meta = buildPageMeta({ page, limit, total });
+    const { items, total, page, limit } = await postService.getAllPosts({
+      ...queryParams,
+      language,
+    });
 
-  const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
-  return successResponse(res, 200, message, items, items.length, meta);
+    const meta = buildPageMeta({ page, limit, total });
+
+    const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
+    return successResponse(res, 200, message, items, items.length, meta);
 }
-
 
 async function getPopularPosts(req, res, next) {
-  const posts = await postService.getPopularPosts();
+    const language = req.language;
 
-  const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
-  const data = posts.length > 0 ? posts : [];
-  const count = posts.length;
+    const queryParams = matchedData(req, { locations: ["query"] }) || {};
+    queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  successResponse(res, 200, message, data, count);
+    const posts = await postService.getPopularPosts({ ...queryParams, language });
+
+    const message = posts.length > 0 ? "Post(s) retrieved successfully" : "No posts found";
+    const data = posts.length > 0 ? posts : [];
+    const count = posts.length;
+
+    return successResponse(res, 200, message, data, count);
 }
 
-async function getRandomPost(req, res) {
-  const post = await postService.getRandomPost();
-  const message = post ? "Post retrieved successfully" : "No post found";
-  const count = post ? 1 : 0
+async function getRandomPost(req, res, next) {
+    const language = req.language;
 
-  return successResponse(res, 200, message, post, count);
+    const post = await postService.getRandomPost({ language });
+    const message = post ? "Post retrieved successfully" : "No post found";
+    const count = post ? 1 : 0;
+
+    return successResponse(res, 200, message, post, count);
 }
 
-async function getDailyPost(req, res) {
-  const post = await postService.getDailyPost();
-  const message = post ? "Post retrieved successfully" : "No post found";
-  const count = post ? 1 : 0
+async function getDailyPost(req, res, next) {
+    const language = req.language;
 
-  return successResponse(res, 200, message, post, count);
+    const post = await postService.getDailyPost({ language });
+    const message = post ? "Post retrieved successfully" : "No post found";
+    const count = post ? 1 : 0;
+
+    return successResponse(res, 200, message, post, count);
 }
 
 async function getAllPostsFromUser(req, res, next) {
-  const userId = Number(req.params?.id);
-  if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
+    const language = req.language;
 
-  const queryParams = matchedData(req);
-  queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+    const userId = Number(req.params?.id);
+    if (isNaN(userId)) return next(new CustomError(400, "Invalid id given"));
 
-  const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, queryParams);
+    const queryParams = matchedData(req);
+    queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  const meta = buildPageMeta({ page, limit, total });
+    const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, {
+      ...queryParams,
+      language,
+    });
 
-  const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found for this user";
-  return successResponse(res, 200, message, items, items.length, meta);
+    const meta = buildPageMeta({ page, limit, total });
+
+    const message = items.length > 0 ? "Post(s) retrieved successfully" : "No posts found for this user";
+    return successResponse(res, 200, message, items, items.length, meta);
 }
 
-
 async function getPost(req, res, next) {
-  const postId = Number(req.params?.id);
-  if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+    const language = req.language;
 
-  const post = await postService.getPostById(postId);
+    const postId = Number(req.params?.id);
+    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  if (!post) successResponse(res, 404, "No post found", post);
+    const post = await postService.getPostById(postId, { language, published: true });
 
-  successResponse(res, 200, "Post retrieved successfully", post);
+    if (!post) return successResponse(res, 404, "No post found", null, 0);
+
+    return successResponse(res, 200, "Post retrieved successfully", post, 1);
 }
 
 async function createPost(req, res, next) {
-  const { title, body, published, tags } = matchedData(req);
-  const authorId = Number(req.user?.id); //authorId is checked in previous middleware
+    const language = req.language;
 
-  const normalizedTags = tags ? normalizeTags(tags) : undefined;
+    const { title, body, published, tags } = matchedData(req);
+    const authorId = Number(req.user?.id);
+    if (isNaN(authorId)) return next(new CustomError(401, "Unauthorized"));
 
-  const createdPost = await postService.createPost(authorId, title, body, published, normalizedTags);
+    const normalizedTags = tags ? normalizeTags(tags) : [];
 
-  const message = published === true ? "Post was successfully published" : "Post was successfully drafted";
+    const createdPost = await postService.createPost(
+      authorId,
+      title,
+      body,
+      published,
+      normalizedTags,
+      { language }
+    );
 
-  successResponse(res, 200, message, createdPost);
+    const message = published === true ? "Post was successfully published" : "Post was successfully drafted";
+    return successResponse(res, 200, message, createdPost, 1);
 }
 
 async function updatePost(req, res, next) {
-  const postId = Number(req.params?.id); //postId is checked in previous middleware
-  const { title, body, published, tags } = matchedData(req);
+    const language = req.language;
 
-  const normalizedTags = tags ? normalizeTags(tags) : undefined;
+    const postId = Number(req.params?.id);
+    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  const updatedPost = await postService.updatePost(postId, {
-    title,
-    body,
-    published,
-    tags: normalizedTags,
-  });
+    const { title, body, published, tags } = matchedData(req);
+    const normalizedTags = tags ? normalizeTags(tags) : undefined;
 
-  successResponse(res, 200, "Post was successfully updated", updatedPost);
+    const updatedPost = await postService.updatePost(
+      postId,
+      { title, body, published, tags: normalizedTags },
+      { language }
+    );
+
+    if (!updatedPost) return next(new CustomError(404, "Post not found for this language"));
+
+    return successResponse(res, 200, "Post was successfully updated", updatedPost, 1);
 }
 
 async function deletePost(req, res, next) {
-  const postId = Number(req.params?.id); //postId is checked in previous middleware
+    const language = req.language;
 
-  const deletedPost = await postService.deletePost(postId);
+    const postId = Number(req.params?.id);
+    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  successResponse(res, 200, "Post successfully deleted");
+    const deleted = await postService.deletePost(postId, { language });
+    if (!deleted) return next(new CustomError(404, "Post not found for this language"));
+
+    return successResponse(res, 200, "Post successfully deleted");
 }
 
-// async function getAllDraftsFromCurrentUser(req, res, next) {
-//   const userId = Number(req.user?.id);
-//   if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
-
-//   const queryParams = matchedData(req);
-
-//   queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
-
-//   queryParams.published = false;
-
-//   const drafts = await postService.getAllPostsByAuthor(userId, queryParams);
-
-//   const message = drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
-//   const data = drafts.length > 0 ? drafts : [];
-//   const count = drafts.length;
-
-//   successResponse(res, 200, message, data, count);
-// }
-
 async function getAllDraftsFromCurrentUser(req, res, next) {
-  const userId = Number(req.user?.id);
-  if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
+    const language = req.language;
 
-  const queryParams = matchedData(req);
-  queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
-  queryParams.published = false;
+    const userId = Number(req.user?.id);
+    if (isNaN(userId)) return next(new CustomError(401, "Unauthorized"));
 
-  const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, queryParams);
+    const queryParams = matchedData(req);
+    queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+    queryParams.published = false;
 
-  const meta = buildPageMeta({ page, limit, total }); // {page,limit,total,totalPages,hasNext,hasPrev}
+    const { items, total, page, limit } = await postService.getAllPostsByAuthor(userId, {
+      ...queryParams,
+      language,
+    });
 
-  const message = items.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
-  return successResponse(res, 200, message, items, items.length, meta);
+    const meta = buildPageMeta({ page, limit, total });
+
+    const message = items.length > 0 ? "Drafts retrieved successfully" : "No drafts found for this user";
+    return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function getAllDrafts(req, res, next) {
-  const queryParams = matchedData(req);
+    const language = req.language;
 
-  queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
+    const queryParams = matchedData(req);
+    queryParams.tag = queryParams.tag ? normalizeTags(queryParams.tag) : undefined;
 
-  const drafts = await postService.getAllDrafts(queryParams);
+    const drafts = await postService.getAllDrafts({ ...queryParams, language });
 
-  const message = drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found";
-  const data = drafts.length > 0 ? drafts : [];
-  const count = drafts.length;
+    const message = drafts.length > 0 ? "Drafts retrieved successfully" : "No drafts found";
+    const data = drafts.length > 0 ? drafts : [];
+    const count = drafts.length;
 
-  successResponse(res, 200, message, data, count);
+    return successResponse(res, 200, message, data, count);
 }
 
 async function publishDraft(req, res, next) {
-  const postId = Number(req.params?.id); //postId is checked in previous middleware
+    const language = req.language;
 
-  const publishedDraft = await postService.publishDraft(postId);
+    const postId = Number(req.params?.id);
+    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  successResponse(res, 200, "Draft successfully published", publishedDraft);
+    const published = await postService.publishDraft(postId, { language });
+    if (!published) return next(new CustomError(404, "Draft not found for this language"));
+
+    return successResponse(res, 200, "Draft successfully published");
 }
 
-// async function searchPosts(req, res, next) {
-//   const { searchParameters, page, limit, sort } = matchedData(req);
-
-//   if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
-//     return successResponse(res, 400, "No search parameters were given", []); //Not success, but same structure.
-//   }
-
-//   const arrayOfSearchParams = searchParameters
-//     .split(/[\s,]+/) // split on spaces or commas
-//     .filter(Boolean); // remove empty strings
-
-//   if (!Array.isArray(arrayOfSearchParams) || arrayOfSearchParams.length === 0) {
-//     return next(new CustomError(400, "Invalid entry of search parameters"));
-//   }
-
-//   const posts = await postService.searchPosts(arrayOfSearchParams, { page, limit, sort });
-
-//   const message = posts.length > 0 ? "Posts retrieved successfully" : "No posts were found";
-//   const data = posts.length > 0 ? posts : [];
-//   const count = posts.length;
-
-//   successResponse(res, 200, message, data, count);
-// }
-
 async function searchPosts(req, res, next) {
-  const { searchParameters, page, limit, sort } = matchedData(req);
+    const language = req.language;
 
-  // Prefer returning empty results with 200 (UI-friendly)
-  if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
-    const parsedPage = Math.max(1, parseInt(page) || 1);
-    const parsedLimit = Math.max(1, parseInt(limit) || 15);
-    const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
-    return successResponse(res, 200, "No search parameters were given", [], 0, meta);
-  }
+    const { searchParameters, page, limit, sort } = matchedData(req);
 
-  const terms = searchParameters
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+    if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
+      const parsedPage = Math.max(1, parseInt(page) || 1);
+      const parsedLimit = Math.max(1, parseInt(limit) || 15);
+      const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
+      return successResponse(res, 200, "No search parameters were given", [], 0, meta);
+    }
 
-  if (terms.length === 0) {
-    const parsedPage = Math.max(1, parseInt(page) || 1);
-    const parsedLimit = Math.max(1, parseInt(limit) || 15);
-    const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
-    return successResponse(res, 200, "No search parameters were given", [], 0, meta);
-  }
+    const terms = searchParameters
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-  const { items, total, page: p, limit: l } = await postService.searchPosts(terms, { page, limit, sort });
-  const meta = buildPageMeta({ page: p, limit: l, total });
+    if (terms.length === 0) {
+      const parsedPage = Math.max(1, parseInt(page) || 1);
+      const parsedLimit = Math.max(1, parseInt(limit) || 15);
+      const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
+      return successResponse(res, 200, "No search parameters were given", [], 0, meta);
+    }
 
-  const message = items.length > 0 ? "Posts retrieved successfully" : "No posts were found";
-  return successResponse(res, 200, message, items, items.length, meta);
+    const { items, total, page: p, limit: l } = await postService.searchPosts(terms, {
+      language,
+      page,
+      limit,
+      sort,
+    });
+
+    const meta = buildPageMeta({ page: p, limit: l, total });
+
+    const message = items.length > 0 ? "Posts retrieved successfully" : "No posts were found";
+    return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function toggleLike(req, res, next) {
-  const userId = req.user?.id;
-  if (isNaN(userId)) return next(new CustomError(400, "Invalid user ID"));
+    const language = req.language;
 
-  const postId = Number(req.params?.id);
-  if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+    const userId = Number(req.user?.id);
+    if (isNaN(userId)) return next(new CustomError(401, "Unauthorized"));
 
-  const post = await postService.getPostById(postId);
-  if (!post) return next(new CustomError(404, `No post with id ${postId} found`));
+    const postId = Number(req.params?.id);
+    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-  const existing = await postService.hasLiked(postId, userId);
+    const post = await postService.getPostById(postId, { language, published: true });
+    if (!post) return next(new CustomError(404, `No post with id ${postId} found for this language`));
 
-  if (existing) {
-    await postService.removeLike(postId, userId);
-    return successResponse(res, 200, "Unliked post");
-  } else {
-    await postService.addLike(postId, userId);
-    return successResponse(res, 201, "Liked post");
-  }
+    const existing = await postService.hasLiked(postId, userId, { language });
+
+    if (existing) {
+      await postService.removeLike(postId, userId, { language });
+      return successResponse(res, 200, "Unliked post");
+    } else {
+      await postService.addLike(postId, userId, { language });
+      return successResponse(res, 201, "Liked post");
+    }
 }
 
 async function recordDailyJokeView(req, res, next) {
   const currentUser = req.user;
-  if (!currentUser?.id) return next(new CustomError(401, "Unauthorized. Please log in."));
+  if (!currentUser?.id) {
+    return next(new CustomError(401, "Unauthorized. Please log in."));
+  }
 
   const userId = Number(currentUser.id);
   const user = await userService.getUserById(userId);
@@ -275,7 +274,6 @@ async function recordDailyJokeView(req, res, next) {
   if (!last) {
     newStreak = 1;
   } else if (isSameUtcDay(last, now)) {
-    // already viewed today => do nothing
     newStreak = user.dailyJokeStreak ?? 0;
   } else if (isYesterdayUtc(last, now)) {
     newStreak = (user.dailyJokeStreak ?? 0) + 1;
@@ -291,13 +289,10 @@ async function recordDailyJokeView(req, res, next) {
     dailyJokeLastViewedAt: now,
   });
 
-  const clientUser = toClientUser(updated);
-
   return successResponse(res, 200, "Daily joke view recorded", {
-    dailyJokeStreak: clientUser.dailyJokeStreak,
-    dailyJokeBestStreak: clientUser.dailyJokeBestStreak,
-    dailyJokeLastViewedAt: clientUser.dailyJokeLastViewedAt,
-    user: clientUser, // optional; convenient for frontend state refresh
+    dailyJokeStreak: updated.dailyJokeStreak,
+    dailyJokeBestStreak: updated.dailyJokeBestStreak,
+    dailyJokeLastViewedAt: updated.dailyJokeLastViewedAt,
   });
 }
 

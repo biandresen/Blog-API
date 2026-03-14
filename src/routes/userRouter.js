@@ -10,7 +10,7 @@ import isSelfOrAdmin from "../middleware/isSelfOrAdmin.js";
 import queryParametersValidator from "../validation/queryParametersValidator.js";
 import checkValidation from "../middleware/checkValidation.js";
 import avatarUpload from "../middleware/avatarUpload.js";
-import { uploadLimiter } from "../middleware/rateLimiters.js";
+import { profileLimiter, readHeavyLimiter, uploadLimiter } from "../middleware/rateLimiters.js";
 
 
 const router = Router();
@@ -20,12 +20,12 @@ router.get("/:id", isAuthenticated, asyncErrorHandler(userController.getUserProf
 router.get(
   "/input/:userInput",
   isAuthenticated,
-  asyncErrorHandler(userController.getUserProfileByNameOrEmail)
+  asyncErrorHandler(userController.getUserByNameOrEmail)
 );
 
 router.patch(
   "/:id",
-  uploadLimiter,
+  profileLimiter,
   isAuthenticated,
   isSelfOrAdmin,
   ...avatarUpload,
@@ -36,6 +36,7 @@ router.patch(
 
 router.patch(
   "/:id/role",
+  profileLimiter,
   isAuthenticated,
   isAdmin,
   changeRoleValidator,
@@ -43,12 +44,13 @@ router.patch(
   asyncErrorHandler(userController.changeUserRole)
 );
 
-router.patch("/:id/reactivate", isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
+router.patch("/:id/reactivate", profileLimiter, isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
 
-router.delete("/:id", isAuthenticated, isSelfOrAdmin, asyncErrorHandler(userController.deleteUser));
+router.delete("/:id", profileLimiter, isAuthenticated, isSelfOrAdmin, asyncErrorHandler(userController.deleteUser));
 
 router.get(
   "/:id/posts",
+  readHeavyLimiter,
   queryParametersValidator,
   checkValidation,
   asyncErrorHandler(postController.getAllPostsFromUser)

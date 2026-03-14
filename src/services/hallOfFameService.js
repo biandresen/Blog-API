@@ -1,5 +1,6 @@
 import prisma from "../config/prismaClient.js";
 import { startOfUtcMonth, addUtcMonths, startOfUtcWeek, addUtcDays } from "../utils/date.js";
+import { normalizeLanguage } from "../utils/language.js";
 
 const FEATURE_BADGES = [
   "TOP_CREATOR_MONTH",
@@ -43,20 +44,30 @@ function sumWeights(winsByBadge) {
   return score;
 }
 
-export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
+export async function getHallOfFameUsers({ language, period = "month", limit = 25 } = {}) {
+  const lang = normalizeLanguage(language);
   const { from, to } = getPeriodRange(period);
 
-  // 1) badge wins
+  const timeFilter = from && to ? { gte: from, lt: to } : null;
+
+  /**
+   * 1) Badge wins (language-scoped)
+   * Recommended: BadgeAward has `language` column.
+   * If not, you can still filter by JSON context, but that's weaker.
+   */
   const winsRows = await prisma.badgeAward.groupBy({
     by: ["userId", "badge"],
     where: {
       badge: { in: FEATURE_BADGES },
-      ...(from && to ? { awardedAt: { gte: from, lt: to } } : {}),
+      ...(timeFilter ? { awardedAt: timeFilter } : {}),
+      // If BadgeAward.language exists:
+      language: lang,
+      // If you did NOT add BadgeAward.language, you'd need:
+      // context: { path: ["language"], equals: lang },  // Postgres JSON path filter
     },
     _count: { _all: true },
   });
 
-  // map: userId -> {badge: count}
   const winsByUser = new Map();
   for (const r of winsRows) {
     const u = r.userId;
@@ -64,11 +75,17 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
     winsByUser.get(u)[r.badge] = r._count._all;
   }
 
-  // 2) likes received (group by postId, then map postId->authorId)
+  /**
+   * 2) Likes received (language-scoped)
+   * Best: PostLike has `language` OR filter through `post.language`.
+   */
   const likeRows = await prisma.postLike.groupBy({
     by: ["postId"],
     where: {
-      ...(from && to ? { createdAt: { gte: from, lt: to } } : {}),
+      ...(timeFilter ? { createdAt: timeFilter } : {}),
+      post: { language: lang }, // works even if PostLike has no language field
+      // If PostLike.language exists you can also add:
+      // language: lang,
     },
     _count: { _all: true },
   });
@@ -76,7 +93,7 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
   const likePostIds = likeRows.map((r) => r.postId);
   const likePosts = likePostIds.length
     ? await prisma.blogPost.findMany({
-        where: { id: { in: likePostIds } },
+        where: { id: { in: likePostIds }, language: lang },
         select: { id: true, authorId: true },
       })
     : [];
@@ -89,11 +106,17 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
     likesByUser.set(authorId, (likesByUser.get(authorId) ?? 0) + r._count._all);
   }
 
-  // 3) comments received (same pattern)
+  /**
+   * 3) Comments received (language-scoped)
+   * Best: Comment has `language` OR filter through `post.language`.
+   */
   const commentRows = await prisma.comment.groupBy({
     by: ["postId"],
     where: {
-      ...(from && to ? { createdAt: { gte: from, lt: to } } : {}),
+      ...(timeFilter ? { createdAt: timeFilter } : {}),
+      post: { language: lang }, // works even if Comment has no language field
+      // If Comment.language exists:
+      // language: lang,
     },
     _count: { _all: true },
   });
@@ -101,7 +124,7 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
   const commentPostIds = commentRows.map((r) => r.postId);
   const commentPosts = commentPostIds.length
     ? await prisma.blogPost.findMany({
-        where: { id: { in: commentPostIds } },
+        where: { id: { in: commentPostIds }, language: lang },
         select: { id: true, authorId: true },
       })
     : [];
@@ -114,7 +137,9 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
     commentsByUser.set(authorId, (commentsByUser.get(authorId) ?? 0) + r._count._all);
   }
 
-  // 4) build user list from union of ids (or you can include more later)
+  /**
+   * 4) Union of users in this language slice
+   */
   const userIds = new Set([
     ...winsByUser.keys(),
     ...likesByUser.keys(),
@@ -130,21 +155,28 @@ export async function getHallOfFameUsers({ period = "month", limit = 25 }) {
       username: true,
       avatar: true,
       role: true,
+
+      // NOTE: these are global in your schema.
+      // If you make streaks per language later, change selection accordingly.
       dailyJokeStreak: true,
       dailyJokeBestStreak: true,
+
+      // If you add language to CurrentUserBadge, filter it in code or query
       currentBadges: true,
     },
   });
 
-  // 5) compose rows + sort
+  /**
+   * 5) Compose + sort
+   */
   const rows = users.map((u) => {
     const winsByBadge = winsByUser.get(u.id) ?? {};
     const winsTotal = Object.values(winsByBadge).reduce((a, b) => a + (b ?? 0), 0);
-
     const featuredScore = sumWeights(winsByBadge);
 
     return {
       user: u,
+      language: lang,
       winsByBadge,
       winsTotal,
       featuredScore,

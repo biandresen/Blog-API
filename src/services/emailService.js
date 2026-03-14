@@ -9,7 +9,7 @@ async function sendResetPasswordEmail(to, resetUrl) {
       to, // use the function argument
       subject: "Reset your password",
       html: `
-        <h2>Bloggy - Password Reset</h2>
+        <h2>DadJokes - Password Reset</h2>
         <p>Click below to reset your password. This link expires in 5 minutes.</p>
         <p><a href="${resetUrl}">${resetUrl}</a></p>
       `,

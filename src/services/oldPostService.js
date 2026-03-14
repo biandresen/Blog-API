@@ -1,76 +1,11 @@
 import prisma from "../config/prismaClient.js";
 import { Prisma } from "@prisma/client";
 
-import { FEATURED_POST } from "../constants.js";
+import { FEATURED_POST, INCLUDED_IN_USER } from "../constants.js";
 import { startOfUtcDay } from "../utils/date.js";
 import { deterministicIndex } from "../utils/deterministicIndex.js";
 import badgeService from "./badgeService.js";
 import { normalizeLanguage } from "../utils/language.js";
-
-/**
- * Base user fields always returned with posts
- * (language-independent)
- */
-const BASE_USER_SELECT = {
-  id: true,
-  username: true,
-  avatar: true,
-  role: true,
-  dailyJokeStreak: true,
-  dailyJokeBestStreak: true,
-};
-
-
-/**
- * Build language-filtered user selection
- * Ensures badges only appear for the active language
- */
-function buildIncludedUser(language) {
-  const lang = normalizeLanguage(language);
-
-  return {
-    ...BASE_USER_SELECT,
-    currentBadges: {
-      where: {
-        language: lang,
-      },
-      select: {
-        id: true,
-        badge: true,
-        since: true,
-        validTo: true,
-        context: true,
-        language: true,
-      },
-    },
-  };
-}
-
-/**
- * Build post include with language-aware author badges
- */
-function buildPostInclude(language) {
-  const lang = normalizeLanguage(language);
-
-  return {
-    tags: true,
-
-    likes: {
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-      },
-    },
-
-    user: {
-      select: buildIncludedUser(lang),
-    },
-  };
-}
 
 /**
  * Tag normalization (optional but recommended)
@@ -94,6 +29,19 @@ function uniqueNormalizedTags(tags) {
   }
   return [...set];
 }
+
+/**
+ * Common include used across endpoints
+ */
+const postInclude = {
+  tags: true,
+  likes: {
+    include: {
+      user: { select: { id: true, username: true } },
+    },
+  },
+  user: { select: INCLUDED_IN_USER },
+};
 
 async function getAllPosts({
   language,
@@ -126,15 +74,15 @@ async function getAllPosts({
   };
 
   const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy,
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: postInclude,
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
 
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
@@ -169,11 +117,9 @@ async function getAllDrafts({
     },
     skip,
     take: parsedLimit,
-   include: {
+    include: {
       tags: true,
-      user: {
-        select: buildIncludedUser(lang),
-      },
+      user: { select: INCLUDED_IN_USER },
     },
   });
 }
@@ -211,15 +157,15 @@ async function getAllPostsByAuthor(
   };
 
   const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy,
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: postInclude,
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
 
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
@@ -239,9 +185,9 @@ async function getPostById(postId, { language, published } = {}) {
   };
 
   return prisma.blogPost.findFirst({
-  where,
-  include: buildPostInclude(lang),
-});
+    where,
+    include: postInclude,
+  });
 }
 
 async function getRandomPost({ language } = {}) {
@@ -256,12 +202,12 @@ async function getRandomPost({ language } = {}) {
   const skip = Math.floor(Math.random() * count);
 
   const [post] = await prisma.blogPost.findMany({
-  where: { language: lang, published: true },
-  orderBy: { id: "asc" },
-  skip,
-  take: 1,
-  include: buildPostInclude(lang),
-});
+    where: { language: lang, published: true },
+    orderBy: { id: "asc" },
+    skip,
+    take: 1,
+    include: postInclude,
+  });
 
   return post ?? null;
 }
@@ -340,6 +286,7 @@ async function getDailyPost({ language } = {}) {
       data: { type: FEATURED_POST.DAILY, date: dayUtc, postId: post.id, language: lang },
     });
 
+    // If you decide to language-scope badges later, pass language through context
     await badgeService.awardJokeOfTheDayToAuthor({
       authorId: post.authorId,
       postId: post.id,
@@ -396,7 +343,6 @@ async function updatePost(postId, { title, body, published, tags }, { language }
     where: { id: postId, language: lang },
     select: { id: true },
   });
-
   if (!existing) return null;
 
   const updateData = {};
@@ -406,28 +352,23 @@ async function updatePost(postId, { title, body, published, tags }, { language }
 
   if (tags !== undefined) {
     const normalizedTags = uniqueNormalizedTags(tags);
-
     updateData.tags = {
       set: [],
       connectOrCreate: normalizedTags.map((tagName) => ({
-        where: {
-          language_name: {
-            language: lang,
-            name: tagName,
-          },
-        },
-        create: {
-          language: lang,
-          name: tagName,
-        },
+        where: { language_name: { language: lang, name: tagName } },
+        create: { language: lang, name: tagName },
       })),
     };
   }
 
-  await prisma.blogPost.update({
-    where: { id: postId },
+  // Use updateMany so the language is part of the WHERE and can't be bypassed.
+  // Then fetch the updated entity with include.
+  const updated = await prisma.blogPost.updateMany({
+    where: { id: postId, language: lang },
     data: updateData,
   });
+
+  if (updated.count === 0) return null;
 
   return getPostById(postId, { language: lang });
 }
@@ -515,15 +456,18 @@ async function searchPosts(searchParameters, { language, page = 1, limit = 15, s
   };
 
   const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy: { createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc" },
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+    prisma.blogPost.findMany({
+      where,
+      orderBy: { createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc" },
+      skip,
+      take: parsedLimit,
+      include: {
+        tags: true,
+        user: { select: INCLUDED_IN_USER },
+      },
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
 
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
@@ -533,24 +477,24 @@ async function getPopularPosts({ language, limit = 10, tag = null } = {}) {
   const parsedLimit = Math.max(1, parseInt(limit) || 10);
 
   return prisma.blogPost.findMany({
-  where: {
-    language: lang,
-    published: true,
-    ...(tag?.length && {
-      tags: {
-        some: {
-          name: { in: tag.map(normalizeTagName) },
+    where: {
+      language: lang,
+      published: true,
+      ...(tag?.length && {
+        tags: {
+          some: {
+            name: { in: tag.map(normalizeTagName) },
+          },
         },
-      },
-    }),
-  },
-  orderBy: [
-    { likes: { _count: "desc" } },
-    { createdAt: "desc" },
-  ],
-  take: parsedLimit,
-  include: buildPostInclude(lang),
-});
+      }),
+    },
+    orderBy: [
+      { likes: { _count: "desc" } },
+      { createdAt: "desc" },
+    ],
+    take: parsedLimit,
+    include: postInclude,
+  });
 }
 
 export default {

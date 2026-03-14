@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema (language-scoped NO/EN across content + rankings + featured + badges)
 
 generator client {
   provider = "prisma-client-js"
@@ -11,6 +7,11 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum Language {
+  NO
+  EN
 }
 
 enum Role {
@@ -40,6 +41,7 @@ model BadgeAward {
   id        String   @id @default(uuid())
   userId    Int
   badge     BadgeKey
+  language  Language @default(NO)
   awardedAt DateTime @default(now())
   validFrom DateTime?
   validTo   DateTime?
@@ -47,133 +49,199 @@ model BadgeAward {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, badge, validFrom])
-  @@index([userId, awardedAt])
-  @@index([badge, awardedAt])
+  // one award per user+badge+period start per language
+  @@unique([userId, badge, validFrom, language])
+
+  // common queries: user history by language, badge leaderboards by language
+  @@index([userId, language, awardedAt])
+  @@index([badge, language, awardedAt])
+  @@index([language, awardedAt])
 }
 
 model CurrentUserBadge {
-  id      String   @id @default(uuid())
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId  Int
+  id       String   @id @default(uuid())
+  userId   Int
+  badge    BadgeKey
+  language Language @default(NO)
+  since    DateTime @default(now())
+  validTo  DateTime?
+  context  Json?
 
-  badge   BadgeKey
-  since   DateTime @default(now())
-  validTo DateTime?
-  context Json?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, badge])
-  @@index([badge])
+  // one "current" badge per user+badge per language
+  @@unique([userId, badge, language])
+
+  @@index([userId, language])
+  @@index([badge, language])
 }
-
 
 model FeaturedPost {
   id        Int         @id @default(autoincrement())
   type      FeatureType
-  date      DateTime    // store day as midnight UTC
+  language  Language    @default(NO)
+
+  // store day as midnight UTC (or period start for week/month features)
+  date      DateTime
   postId    Int
-  post      BlogPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt DateTime    @default(now())
 
-  @@unique([type, date])
-  @@index([date])
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // ensures: daily joke / trending / etc is unique PER language
+  @@unique([type, date, language])
+
+  // main lookup patterns
+  @@index([language, type, date])
+  @@index([language, date])
+
+  // audits and reverse lookups
   @@index([postId])
 }
 
 model User {
-  id                  Int                  @id @default(autoincrement())
-  username            String               @unique
-  email               String               @unique
-  password            String
-  avatar              String?
-  active              Boolean              @default(true)
-  role                Role                 @default(USER)
-  blogPosts           BlogPost[]
-  comments            Comment[]
-  likes               PostLike[]
-  refreshTokens       RefreshToken[]
-  createdAt           DateTime             @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  deletedAt           DateTime?
-  resetPasswordTokens ResetPasswordToken[]
-  termsAcceptedAt     DateTime?
-  termsVersion        String?
-  dailyJokeStreak     Int                  @default(0)
+  id                    Int                  @id @default(autoincrement())
+  username              String               @unique
+  email                 String               @unique
+  password              String
+  avatar                String?
+  active                Boolean              @default(true)
+  role                  Role                 @default(USER)
+
+  blogPosts             BlogPost[]
+  comments              Comment[]
+  likes                 PostLike[]
+  refreshTokens         RefreshToken[]
+  resetPasswordTokens   ResetPasswordToken[]
+
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @default(now()) @updatedAt
+  deletedAt             DateTime?
+
+  termsAcceptedAt       DateTime?
+  termsVersion          String?
+  preferredLanguage Language @default(NO)
+
+  // streak is global (as you decided)
+  dailyJokeStreak       Int                  @default(0)
   dailyJokeLastViewedAt DateTime?
-  dailyJokeBestStreak Int                  @default(0)
-  currentBadges CurrentUserBadge[]
-  badgeAwards   BadgeAward[]
+  dailyJokeBestStreak   Int                  @default(0)
+
+  currentBadges         CurrentUserBadge[]
+  badgeAwards           BadgeAward[]
 }
 
 model BlogPost {
   id        Int        @id @default(autoincrement())
-  user      User       @relation(fields: [authorId], references: [id])
   authorId  Int
+  language  Language   @default(NO)
+
   title     String
   body      String
   published Boolean    @default(false)
-  comments  Comment[]
-  likes     PostLike[]
-  tags      Tag[]      @relation("PostTags")
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
 
+  user      User       @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  likes     PostLike[]
+  tags      Tag[]      @relation("PostTags")
   featuredIn FeaturedPost[]
-}
 
+  // feed/explore pages
+  @@index([language, published, createdAt])
+  @@index([language, published, updatedAt])
+
+  // deterministic/random selection benefits
+  @@index([language, published, id])
+
+  // author profile pages per language
+  @@index([authorId, language, createdAt])
+
+  // moderation/drafts
+  @@index([language, published])
+}
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
+
+  language  Language @default(NO)
   body      String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  user User     @relation(fields: [authorId], references: [id])
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // paginated comments for a post
   @@index([postId, createdAt])
+
+  // time-window/ranking queries per language
+  @@index([language, createdAt])
+  @@index([language, createdAt, postId])
 }
 
 model Tag {
   id        Int        @id @default(autoincrement())
-  name      String     @unique
-  posts     BlogPost[] @relation("PostTags")
+  language  Language   @default(NO)
+  name      String
+
   createdAt DateTime   @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  updatedAt DateTime   @default(now()) @updatedAt
+
+  posts     BlogPost[] @relation("PostTags")
+
+  // tag unique per language
+  @@unique([language, name])
+
+  // tag lists/autocomplete per language
+  @@index([language, name])
 }
 
 model RefreshToken {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
   token     String
   issuedAt  DateTime
   expiresAt DateTime
   userAgent String?
   ipAddress String?
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model ResetPasswordToken {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
   token     String   @unique
   issuedAt  DateTime
   expiresAt DateTime
   userAgent String?
   ipAddress String?
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model PostLike {
   postId    Int
   userId    Int
+  language  Language @default(NO)
   createdAt DateTime @default(now())
 
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([postId, userId])
+  // one like per user per post
+  @@unique([postId, userId, language])
+
+  // ranking/time-window queries per language
+  @@index([language, createdAt])
+
+  // common lookups
   @@index([postId, createdAt])
   @@index([userId, createdAt])
 }

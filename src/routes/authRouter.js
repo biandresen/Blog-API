@@ -28,6 +28,7 @@ router.post("/refresh", authLimiter, asyncErrorHandler(authController.refreshAcc
 
 router.post(
   "/new-password",
+  authLimiter,
   updatePasswordValidator,
   checkValidation,
   asyncErrorHandler(authController.processResetPassword)
@@ -35,6 +36,7 @@ router.post(
 
 router.post(
   "/reset-password",
+  authLimiter,
   resetPasswordValidator,
   resetPasswordValidator,
   checkValidation,

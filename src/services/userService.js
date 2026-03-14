@@ -1,36 +1,32 @@
 import prisma from "../config/prismaClient.js";
+import { normalizeLanguage } from "../utils/language.js";
 
-async function getUserById(id) {
-  return await prisma.user.findFirst({
+async function getUserById(id, { language } = {}) {
+  const lang = normalizeLanguage(language);
+
+  return prisma.user.findFirst({
     where: { id, active: true },
     include: {
       currentBadges: {
-        select: { id: true, badge: true, since: true, validTo: true, context: true },
+        where: { language: lang },
+        select: { id: true, badge: true, since: true, validTo: true, context: true, language: true },
       },
     },
   });
 }
 
-
 async function getUserByUsername(username) {
-  console.log(username);
-  return await prisma.user.findFirst({
+  return prisma.user.findFirst({
     where: {
-      username: {
-        equals: username,
-        mode: "insensitive",
-      },
+      username: { equals: username, mode: "insensitive" },
     },
   });
 }
 
 async function getUserByEmail(email) {
-  return await prisma.user.findFirst({
+  return prisma.user.findFirst({
     where: {
-      email: {
-        equals: email,
-        mode: "insensitive",
-      },
+      email: { equals: email, mode: "insensitive" },
     },
   });
 }
@@ -43,11 +39,10 @@ async function createUser(username, email, password, meta = {}) {
       password,
       termsAcceptedAt: meta.termsAcceptedAt ?? null,
       termsVersion: meta.termsVersion ?? null,
-      ...meta, // optional additional fields
+      ...meta,
     },
   });
 }
-
 
 async function updateUser(userId, updateData = {}) {
   const fieldsToUpdate = {};
@@ -56,21 +51,25 @@ async function updateUser(userId, updateData = {}) {
   if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
   if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
   if (updateData.avatar !== undefined) fieldsToUpdate.avatar = updateData.avatar;
+
+  if (updateData.preferredLanguage !== undefined)
+    fieldsToUpdate.preferredLanguage = updateData.preferredLanguage;
+
+  // streak fields (global)
   if (updateData.dailyJokeStreak !== undefined) fieldsToUpdate.dailyJokeStreak = updateData.dailyJokeStreak;
   if (updateData.dailyJokeBestStreak !== undefined) fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
   if (updateData.dailyJokeLastViewedAt !== undefined) fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
 
-  return await prisma.user.update({
+  // IMPORTANT: do NOT include currentBadges here.
+  // update responses should not leak NO/EN badge slices.
+  return prisma.user.update({
     where: { id: userId },
     data: fieldsToUpdate,
-    include: {
-      currentBadges: true,
-    },
   });
 }
 
 async function changeRole(userId, role) {
-  return await prisma.user.update({
+  return prisma.user.update({
     where: { id: userId },
     data: role,
   });
@@ -95,7 +94,6 @@ async function reactivateUser(userId) {
     },
   });
 }
-
 
 export default {
   getUserById,
