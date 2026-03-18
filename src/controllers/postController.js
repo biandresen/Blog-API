@@ -81,16 +81,27 @@ async function getAllPostsFromUser(req, res, next) {
 }
 
 async function getPost(req, res, next) {
-    const language = req.language;
+  const language = req.language;
 
-    const postId = Number(req.params?.id);
-    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+  const postId = Number(req.params?.id);
+  if (isNaN(postId)) {
+    return next(new CustomError(400, "Invalid id given"));
+  }
 
-    const post = await postService.getPostById(postId, { language, published: true });
+  const requesterId = Number(req.user?.id);
+  const requesterRole = req.user?.role ?? null;
 
-    if (!post) return successResponse(res, 404, "No post found", null, 0);
+  const post = await postService.getPostById(postId, {
+    language,
+    requesterId: Number.isNaN(requesterId) ? null : requesterId,
+    requesterRole,
+  });
 
-    return successResponse(res, 200, "Post retrieved successfully", post, 1);
+  if (!post) {
+    return successResponse(res, 404, "No post found", null, 0);
+  }
+
+  return successResponse(res, 200, "Post retrieved successfully", post, 1);
 }
 
 async function createPost(req, res, next) {
@@ -233,26 +244,28 @@ async function searchPosts(req, res, next) {
 }
 
 async function toggleLike(req, res, next) {
-    const language = req.language;
+  const language = req.language;
 
-    const userId = Number(req.user?.id);
-    if (isNaN(userId)) return next(new CustomError(401, "Unauthorized"));
+  const userId = Number(req.user?.id);
+  if (isNaN(userId)) return next(new CustomError(401, "Unauthorized"));
 
-    const postId = Number(req.params?.id);
-    if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
+  const postId = Number(req.params?.id);
+  if (isNaN(postId)) return next(new CustomError(400, "Invalid id given"));
 
-    const post = await postService.getPostById(postId, { language, published: true });
-    if (!post) return next(new CustomError(404, `No post with id ${postId} found for this language`));
+  const post = await postService.getPostById(postId, { language, published: true });
+  if (!post) {
+    return next(new CustomError(404, `No post with id ${postId} found for this language`));
+  }
 
-    const existing = await postService.hasLiked(postId, userId, { language });
+  const existing = await postService.hasLiked(postId, userId);
 
-    if (existing) {
-      await postService.removeLike(postId, userId, { language });
-      return successResponse(res, 200, "Unliked post");
-    } else {
-      await postService.addLike(postId, userId, { language });
-      return successResponse(res, 201, "Liked post");
-    }
+  if (existing) {
+    await postService.removeLike(postId, userId);
+    return successResponse(res, 200, "Unliked post");
+  }
+
+  await postService.addLike(postId, userId);
+  return successResponse(res, 201, "Liked post");
 }
 
 async function recordDailyJokeView(req, res, next) {

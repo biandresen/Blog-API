@@ -12,6 +12,7 @@ import searchParametersValidator from "../validation/searchParametersValidator.j
 import queryParametersValidator from "../validation/queryParametersValidator.js";
 import checkValidation from "../middleware/checkValidation.js";
 import { readHeavyLimiter } from "../middleware/rateLimiters.js";
+import optionalAuth from "../middleware/optinalAuth.js";
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.get(
   asyncErrorHandler(postController.getAllDrafts)
 );
 
-router.get("/:id",readHeavyLimiter, asyncErrorHandler(postController.getPost));
+router.get("/:id",readHeavyLimiter, optionalAuth, asyncErrorHandler(postController.getPost));
 
 router.get("/",readHeavyLimiter, queryParametersValidator, checkValidation, asyncErrorHandler(postController.getAllPosts));
 

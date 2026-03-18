@@ -1,5 +1,10 @@
 import prisma from "../config/prismaClient.js";
-import { startOfUtcMonth, addUtcMonths, startOfUtcWeek, addUtcDays } from "../utils/date.js";
+import {
+  startOfUtcMonth,
+  addUtcMonths,
+  startOfUtcWeek,
+  addUtcDays,
+} from "../utils/date.js";
 import { normalizeLanguage } from "../utils/language.js";
 
 const FEATURE_BADGES = [
@@ -33,112 +38,143 @@ function getPeriodRange(period) {
     return { from, to };
   }
 
-  return { from: null, to: null }; // all-time
+  return { from: null, to: null };
 }
 
 function sumWeights(winsByBadge) {
   let score = 0;
+
   for (const [badge, count] of Object.entries(winsByBadge)) {
     score += (WEIGHTS[badge] ?? 0) * (count ?? 0);
   }
+
   return score;
 }
 
-export async function getHallOfFameUsers({ language, period = "month", limit = 25 } = {}) {
+export async function getHallOfFameUsers({
+  language,
+  period = "month",
+  limit = 25,
+} = {}) {
   const lang = normalizeLanguage(language);
-  const { from, to } = getPeriodRange(period);
 
+  const safePeriod =
+    period === "week" || period === "month" || period === "all"
+      ? period
+      : "month";
+
+  const parsedLimit = Math.min(100, Math.max(1, Number(limit) || 25));
+
+  const { from, to } = getPeriodRange(safePeriod);
   const timeFilter = from && to ? { gte: from, lt: to } : null;
 
   /**
-   * 1) Badge wins (language-scoped)
-   * Recommended: BadgeAward has `language` column.
-   * If not, you can still filter by JSON context, but that's weaker.
+   * Badge wins are explicitly language-scoped.
    */
   const winsRows = await prisma.badgeAward.groupBy({
     by: ["userId", "badge"],
     where: {
       badge: { in: FEATURE_BADGES },
       ...(timeFilter ? { awardedAt: timeFilter } : {}),
-      // If BadgeAward.language exists:
       language: lang,
-      // If you did NOT add BadgeAward.language, you'd need:
-      // context: { path: ["language"], equals: lang },  // Postgres JSON path filter
     },
     _count: { _all: true },
   });
 
   const winsByUser = new Map();
-  for (const r of winsRows) {
-    const u = r.userId;
-    if (!winsByUser.has(u)) winsByUser.set(u, {});
-    winsByUser.get(u)[r.badge] = r._count._all;
+
+  for (const row of winsRows) {
+    if (!winsByUser.has(row.userId)) {
+      winsByUser.set(row.userId, {});
+    }
+
+    winsByUser.get(row.userId)[row.badge] = row._count._all;
   }
 
   /**
-   * 2) Likes received (language-scoped)
-   * Best: PostLike has `language` OR filter through `post.language`.
+   * Likes received for posts in the selected language.
+   * Language is derived from the related BlogPost.
    */
   const likeRows = await prisma.postLike.groupBy({
     by: ["postId"],
     where: {
       ...(timeFilter ? { createdAt: timeFilter } : {}),
-      post: { language: lang }, // works even if PostLike has no language field
-      // If PostLike.language exists you can also add:
-      // language: lang,
+      post: { language: lang },
     },
     _count: { _all: true },
   });
 
-  const likePostIds = likeRows.map((r) => r.postId);
+  const likePostIds = likeRows.map((row) => row.postId);
+
   const likePosts = likePostIds.length
     ? await prisma.blogPost.findMany({
-        where: { id: { in: likePostIds }, language: lang },
-        select: { id: true, authorId: true },
+        where: {
+          id: { in: likePostIds },
+          language: lang,
+        },
+        select: {
+          id: true,
+          authorId: true,
+        },
       })
     : [];
 
-  const postIdToAuthor = new Map(likePosts.map((p) => [p.id, p.authorId]));
+  const postIdToAuthor = new Map(likePosts.map((post) => [post.id, post.authorId]));
   const likesByUser = new Map();
-  for (const r of likeRows) {
-    const authorId = postIdToAuthor.get(r.postId);
+
+  for (const row of likeRows) {
+    const authorId = postIdToAuthor.get(row.postId);
     if (!authorId) continue;
-    likesByUser.set(authorId, (likesByUser.get(authorId) ?? 0) + r._count._all);
+
+    likesByUser.set(authorId, (likesByUser.get(authorId) ?? 0) + row._count._all);
   }
 
   /**
-   * 3) Comments received (language-scoped)
-   * Best: Comment has `language` OR filter through `post.language`.
+   * Comments received for posts in the selected language.
+   * Language is derived from the related BlogPost.
    */
   const commentRows = await prisma.comment.groupBy({
     by: ["postId"],
     where: {
       ...(timeFilter ? { createdAt: timeFilter } : {}),
-      post: { language: lang }, // works even if Comment has no language field
-      // If Comment.language exists:
-      // language: lang,
+      post: { language: lang },
     },
     _count: { _all: true },
   });
 
-  const commentPostIds = commentRows.map((r) => r.postId);
+  const commentPostIds = commentRows.map((row) => row.postId);
+
   const commentPosts = commentPostIds.length
     ? await prisma.blogPost.findMany({
-        where: { id: { in: commentPostIds }, language: lang },
-        select: { id: true, authorId: true },
+        where: {
+          id: { in: commentPostIds },
+          language: lang,
+        },
+        select: {
+          id: true,
+          authorId: true,
+        },
       })
     : [];
 
-  const cPostIdToAuthor = new Map(commentPosts.map((p) => [p.id, p.authorId]));
+  const commentPostIdToAuthor = new Map(
+    commentPosts.map((post) => [post.id, post.authorId])
+  );
+
   const commentsByUser = new Map();
-  for (const r of commentRows) {
-    const authorId = cPostIdToAuthor.get(r.postId);
+
+  for (const row of commentRows) {
+    const authorId = commentPostIdToAuthor.get(row.postId);
     if (!authorId) continue;
-    commentsByUser.set(authorId, (commentsByUser.get(authorId) ?? 0) + r._count._all);
+
+    commentsByUser.set(
+      authorId,
+      (commentsByUser.get(authorId) ?? 0) + row._count._all
+    );
   }
 
   /**
-   * 4) Union of users in this language slice
+   * Union of users appearing in this language slice.
    */
   const userIds = new Set([
     ...winsByUser.keys(),
@@ -149,53 +185,62 @@ export async function getHallOfFameUsers({ language, period = "month", limit = 2
   if (userIds.size === 0) return [];
 
   const users = await prisma.user.findMany({
-    where: { id: { in: Array.from(userIds) } },
+    where: {
+      id: { in: Array.from(userIds) },
+    },
     select: {
       id: true,
       username: true,
       avatar: true,
       role: true,
-
-      // NOTE: these are global in your schema.
-      // If you make streaks per language later, change selection accordingly.
       dailyJokeStreak: true,
       dailyJokeBestStreak: true,
-
-      // If you add language to CurrentUserBadge, filter it in code or query
       currentBadges: true,
     },
   });
 
-  /**
-   * 5) Compose + sort
-   */
-  const rows = users.map((u) => {
-    const winsByBadge = winsByUser.get(u.id) ?? {};
-    const winsTotal = Object.values(winsByBadge).reduce((a, b) => a + (b ?? 0), 0);
+  const rows = users.map((user) => {
+    const winsByBadge = winsByUser.get(user.id) ?? {};
+    const winsTotal = Object.values(winsByBadge).reduce(
+      (sum, count) => sum + (count ?? 0),
+      0
+    );
+
     const featuredScore = sumWeights(winsByBadge);
 
     return {
-      user: u,
-      language: lang,
+      user,
       winsByBadge,
       winsTotal,
       featuredScore,
-      likesReceived: likesByUser.get(u.id) ?? 0,
-      commentsReceived: commentsByUser.get(u.id) ?? 0,
-      dailyStreak: u.dailyJokeStreak ?? 0,
-      bestStreak: u.dailyJokeBestStreak ?? 0,
+      likesReceived: likesByUser.get(user.id) ?? 0,
+      commentsReceived: commentsByUser.get(user.id) ?? 0,
+      dailyStreak: user.dailyJokeStreak ?? 0,
+      bestStreak: user.dailyJokeBestStreak ?? 0,
     };
   });
 
   rows.sort((a, b) => {
-    if (b.featuredScore !== a.featuredScore) return b.featuredScore - a.featuredScore;
-    if (b.winsTotal !== a.winsTotal) return b.winsTotal - a.winsTotal;
-    if (b.likesReceived !== a.likesReceived) return b.likesReceived - a.likesReceived;
-    if (b.dailyStreak !== a.dailyStreak) return b.dailyStreak - a.dailyStreak;
+    if (b.featuredScore !== a.featuredScore) {
+      return b.featuredScore - a.featuredScore;
+    }
+
+    if (b.winsTotal !== a.winsTotal) {
+      return b.winsTotal - a.winsTotal;
+    }
+
+    if (b.likesReceived !== a.likesReceived) {
+      return b.likesReceived - a.likesReceived;
+    }
+
+    if (b.dailyStreak !== a.dailyStreak) {
+      return b.dailyStreak - a.dailyStreak;
+    }
+
     return b.commentsReceived - a.commentsReceived;
   });
 
-  return rows.slice(0, limit);
+  return rows.slice(0, parsedLimit);
 }
 
 export default { getHallOfFameUsers };

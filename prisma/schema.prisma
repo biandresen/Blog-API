@@ -120,7 +120,7 @@ model User {
 
   termsAcceptedAt       DateTime?
   termsVersion          String?
-  preferredLanguage Language @default(NO)
+  preferredLanguage     Language             @default(NO)
 
   // streak is global (as you decided)
   dailyJokeStreak       Int                  @default(0)
@@ -158,17 +158,12 @@ model BlogPost {
 
   // author profile pages per language
   @@index([authorId, language, createdAt])
-
-  // moderation/drafts
-  @@index([language, published])
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
   authorId  Int
   postId    Int
-
-  language  Language @default(NO)
   body      String
 
   createdAt DateTime @default(now())
@@ -179,10 +174,6 @@ model Comment {
 
   // paginated comments for a post
   @@index([postId, createdAt])
-
-  // time-window/ranking queries per language
-  @@index([language, createdAt])
-  @@index([language, createdAt, postId])
 }
 
 model Tag {
@@ -197,21 +188,21 @@ model Tag {
 
   // tag unique per language
   @@unique([language, name])
-
-  // tag lists/autocomplete per language
-  @@index([language, name])
 }
 
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    Int
-  token     String
+  token     String   @unique
   issuedAt  DateTime
   expiresAt DateTime
   userAgent String?
   ipAddress String?
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model ResetPasswordToken {
@@ -224,22 +215,21 @@ model ResetPasswordToken {
   ipAddress String?
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model PostLike {
   postId    Int
   userId    Int
-  language  Language @default(NO)
   createdAt DateTime @default(now())
 
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // one like per user per post
-  @@unique([postId, userId, language])
-
-  // ranking/time-window queries per language
-  @@index([language, createdAt])
+  @@unique([postId, userId])
 
   // common lookups
   @@index([postId, createdAt])

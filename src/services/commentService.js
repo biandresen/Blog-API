@@ -3,38 +3,40 @@ import { INCLUDED_IN_USER } from "../constants.js";
 import { normalizeLanguage } from "../utils/language.js";
 
 /**
- * Helper: ensures the post exists and belongs to the current language.
- * Also prevents commenting on the wrong language by ID.
+ * Ensures the target post exists in the requested language.
+ * This is useful for language-scoped read/create flows tied to a post.
  */
 async function assertPostInLanguage(postId, language, { published } = {}) {
   const lang = normalizeLanguage(language);
 
-  const post = await prisma.blogPost.findFirst({
+  return prisma.blogPost.findFirst({
     where: {
       id: postId,
       language: lang,
       ...(typeof published === "boolean" ? { published } : {}),
     },
-    select: { id: true, language: true, published: true },
+    select: {
+      id: true,
+      language: true,
+      published: true,
+    },
   });
-
-  return post; // null if not found
 }
 
+/**
+ * Create comment on a published post in the currently selected language.
+ * Language is validated through the post, not stored on the comment itself.
+ */
 async function createComment(postId, authorId, body, { language } = {}) {
-  const lang = normalizeLanguage(language);
+  const post = await assertPostInLanguage(postId, language, { published: true });
 
-  // Enforce language partitioning
-  const post = await assertPostInLanguage(postId, lang, { published: true });
   if (!post) return null;
 
-  // If you added Comment.language, set it. If you did not, remove language from data.
   return prisma.comment.create({
     data: {
       body,
       authorId,
       postId,
-      language: lang,
     },
     include: {
       user: { select: INCLUDED_IN_USER },
@@ -42,55 +44,65 @@ async function createComment(postId, authorId, body, { language } = {}) {
   });
 }
 
+/**
+ * Get paginated comments for a published post in the current language.
+ * We validate the post language once, then fetch comments by postId only.
+ */
 async function getAllCommentsFromPost(
   postId,
   { language, page = 1, limit = 10, sort = "asc" } = {}
 ) {
   const lang = normalizeLanguage(language);
 
-  // Enforce that the post belongs to this language
   const post = await assertPostInLanguage(postId, lang, { published: true });
-  if (!post) return { items: [], total: 0, page: 1, limit: Number(limit) || 10, language: lang };
 
-  const parsedPage = Math.max(1, parseInt(page) || 1);
-  const parsedLimit = Math.max(1, parseInt(limit) || 10);
+  if (!post) {
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      limit: Number(limit) || 10,
+    };
+  }
+
+  const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+  const parsedLimit = Math.max(1, parseInt(limit, 10) || 10);
   const skip = (parsedPage - 1) * parsedLimit;
+  const normalizedSort = sort?.toLowerCase() === "asc" ? "asc" : "desc";
 
   const where = {
-  postId,
-  language: lang,
-};
+    postId,
+  };
 
-const [items, total] = await Promise.all([
-  prisma.comment.findMany({
-    where,
-    orderBy: { createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc" },
-    skip,
-    take: parsedLimit,
-    include: {
-      user: { select: INCLUDED_IN_USER },
-    },
-  }),
-  prisma.comment.count({ where }),
-]);
+  const [items, total] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: { createdAt: normalizedSort },
+      skip,
+      take: parsedLimit,
+      include: {
+        user: { select: INCLUDED_IN_USER },
+      },
+    }),
+    prisma.comment.count({ where }),
+  ]);
 
-  return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
+  return {
+    items,
+    total,
+    page: parsedPage,
+    limit: parsedLimit,
+  };
 }
 
 /**
- * Language-safe "get by id":
- * - Never allow `findUnique({ id })` alone because it bypasses language partitioning
- * - Scope via relation: comment.post.language
+ * Get comment by id only.
+ * Comment identity is global and should not depend on current UI language.
  */
-async function getCommentById(commentId, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
-  return prisma.comment.findFirst({
+async function getCommentById(commentId) {
+  return prisma.comment.findUnique({
     where: {
       id: commentId,
-      post: { language: lang },
-      // If you added Comment.language:
-      // language: lang,
     },
     include: {
       user: { select: INCLUDED_IN_USER },
@@ -99,37 +111,43 @@ async function getCommentById(commentId, { language } = {}) {
 }
 
 /**
- * Use deleteMany/updateMany so language is part of WHERE and cannot be bypassed.
+ * Delete comment by id only.
+ * Authorization should be handled in the controller/service layer above this call.
  */
-async function deleteComment(commentId, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
+async function deleteComment(commentId) {
   const res = await prisma.comment.deleteMany({
     where: {
       id: commentId,
-      post: { language: lang },
-      // language: lang,
     },
   });
 
   return res.count > 0;
 }
 
-async function updateComment(commentId, body, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
+/**
+ * Update comment by id only.
+ * Language should not be part of comment mutation queries.
+ */
+async function updateComment(commentId, body) {
   const res = await prisma.comment.updateMany({
     where: {
       id: commentId,
-      post: { language: lang },
-      // language: lang,
     },
-    data: { body },
+    data: {
+      body,
+    },
   });
 
   if (res.count === 0) return null;
 
-  return getCommentById(commentId, { language: lang });
+  return prisma.comment.findUnique({
+    where: {
+      id: commentId,
+    },
+    include: {
+      user: { select: INCLUDED_IN_USER },
+    },
+  });
 }
 
 export default {

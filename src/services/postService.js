@@ -224,24 +224,39 @@ async function getAllPostsByAuthor(
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
 
-/**
- * IMPORTANT SECURITY CHANGE:
- * Never `findUnique({ where: { id } })` without language scoping if you want strict partitioning.
- * Use `findFirst({ where: { id, language } })` instead.
- */
-async function getPostById(postId, { language, published } = {}) {
+
+async function getPostById(
+  postId,
+  { language, requesterId = null, requesterRole = null } = {}
+) {
   const lang = normalizeLanguage(language);
 
-  const where = {
-    id: postId,
-    language: lang,
-    ...(typeof published === "boolean" ? { published } : {}),
-  };
+  const post = await prisma.blogPost.findFirst({
+    where: {
+      id: postId,
+      language: lang,
+    },
+    include: buildPostInclude(lang),
+  });
 
-  return prisma.blogPost.findFirst({
-  where,
-  include: buildPostInclude(lang),
-});
+  if (!post) return null;
+
+  // Public post
+  if (post.published) {
+    return post;
+  }
+
+  // Draft visible to author
+  if (requesterId != null && post.authorId === requesterId) {
+    return post;
+  }
+
+  // Draft visible to admin
+  if (requesterRole === "ADMIN") {
+    return post;
+  }
+
+  return null;
 }
 
 async function getRandomPost({ language } = {}) {
@@ -454,36 +469,31 @@ async function publishDraft(postId, { language } = {}) {
   return updated.count > 0;
 }
 
-async function addLike(postId, userId, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
-  // Safety: ensure the post exists in this language (prevents cross-language liking by ID)
-  const post = await prisma.blogPost.findFirst({
-    where: { id: postId, language: lang, published: true },
-    select: { id: true },
-  });
-  if (!post) return null;
-
+async function addLike(postId, userId) {
   return prisma.postLike.create({
-    data: { postId, userId, language: lang },
+    data: {
+      postId,
+      userId,
+    },
   });
 }
 
-async function removeLike(postId, userId, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
-  // If your @@unique is still [postId, userId], language isn't needed for deletion.
-  // But keeping this makes intent explicit and supports future change to @@unique([postId,userId,language]).
+async function removeLike(postId, userId) {
   return prisma.postLike.deleteMany({
-    where: { postId, userId, language: lang },
+    where: {
+      postId,
+      userId,
+    },
   });
 }
-
-async function hasLiked(postId, userId, { language } = {}) {
-  const lang = normalizeLanguage(language);
-
-  return prisma.postLike.findFirst({
-    where: { postId, userId, language: lang },
+async function hasLiked(postId, userId) {
+  return prisma.postLike.findUnique({
+    where: {
+      postId_userId: {
+        postId,
+        userId,
+      },
+    },
   });
 }
 
