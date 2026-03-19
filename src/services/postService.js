@@ -497,26 +497,95 @@ async function hasLiked(postId, userId) {
   });
 }
 
-async function searchPosts(searchParameters, { language, page = 1, limit = 15, sort = "desc" } = {}) {
+async function searchPosts(
+  searchParameters,
+  {
+    language,
+    page = 1,
+    limit = 15,
+    sort = "desc",
+    filters = { title: true, body: true, comments: true, tags: true },
+  } = {}
+) {
   const lang = normalizeLanguage(language);
 
-  const parsedPage = Math.max(1, parseInt(page) || 1);
-  const parsedLimit = Math.max(1, parseInt(limit) || 15);
+  const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+  const parsedLimit = Math.max(1, parseInt(limit, 10) || 15);
   const skip = (parsedPage - 1) * parsedLimit;
 
   const terms = (Array.isArray(searchParameters) ? searchParameters : [])
-    .map((t) => t?.toString()?.trim())
+    .map((term) => term?.toString()?.trim())
     .filter(Boolean);
 
   if (terms.length === 0) {
-    return { items: [], total: 0, page: parsedPage, limit: parsedLimit, language: lang };
+    return {
+      items: [],
+      total: 0,
+      page: parsedPage,
+      limit: parsedLimit,
+      language: lang,
+    };
   }
 
-  const orConditions = terms.flatMap((term) => [
-    { title: { contains: term, mode: "insensitive" } },
-    { body: { contains: term, mode: "insensitive" } },
-    { tags: { some: { name: { contains: term, mode: "insensitive" } } } },
-  ]);
+  const activeFilters = {
+    title: !!filters.title,
+    body: !!filters.body,
+    comments: !!filters.comments,
+    tags: !!filters.tags,
+  };
+
+  if (
+    !activeFilters.title &&
+    !activeFilters.body &&
+    !activeFilters.comments &&
+    !activeFilters.tags
+  ) {
+    return {
+      items: [],
+      total: 0,
+      page: parsedPage,
+      limit: parsedLimit,
+      language: lang,
+    };
+  }
+
+  const orConditions = terms.flatMap((term) => {
+    const conditions = [];
+
+    if (activeFilters.title) {
+      conditions.push({
+        title: { contains: term, mode: "insensitive" },
+      });
+    }
+
+    if (activeFilters.body) {
+      conditions.push({
+        body: { contains: term, mode: "insensitive" },
+      });
+    }
+
+    if (activeFilters.comments) {
+      conditions.push({
+        comments: {
+          some: {
+            body: { contains: term, mode: "insensitive" },
+          },
+        },
+      });
+    }
+
+    if (activeFilters.tags) {
+      conditions.push({
+        tags: {
+          some: {
+            name: { contains: term, mode: "insensitive" },
+          },
+        },
+      });
+    }
+
+    return conditions;
+  });
 
   const where = {
     language: lang,
@@ -524,18 +593,26 @@ async function searchPosts(searchParameters, { language, page = 1, limit = 15, s
     OR: orConditions,
   };
 
-  const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy: { createdAt: sort.toLowerCase() === "asc" ? "asc" : "desc" },
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+  const normalizedSort = sort?.toLowerCase() === "asc" ? "asc" : "desc";
 
-  return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
+  const [items, total] = await Promise.all([
+    prisma.blogPost.findMany({
+      where,
+      orderBy: { createdAt: normalizedSort },
+      skip,
+      take: parsedLimit,
+      include: buildPostInclude(lang),
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    page: parsedPage,
+    limit: parsedLimit,
+    language: lang,
+  };
 }
 
 async function getPopularPosts({ language, limit = 10, tag = null } = {}) {

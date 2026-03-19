@@ -13,6 +13,7 @@ import queryParametersValidator from "../validation/queryParametersValidator.js"
 import checkValidation from "../middleware/checkValidation.js";
 import { readHeavyLimiter } from "../middleware/rateLimiters.js";
 import optionalAuth from "../middleware/optinalAuth.js";
+import searchFiltersValidator from "../validation/searchFiltersValidator.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get(
   "/search",
   readHeavyLimiter,
   searchParametersValidator,
+  searchFiltersValidator,
   queryParametersValidator,
   checkValidation,
   asyncErrorHandler(postController.searchPosts)

@@ -207,40 +207,83 @@ async function publishDraft(req, res, next) {
 }
 
 async function searchPosts(req, res, next) {
-    const language = req.language;
+  const language = req.language;
 
-    const { searchParameters, page, limit, sort } = matchedData(req);
+  const data = matchedData(req);
+  const { searchParameters, page, limit, sort } = data;
 
-    if (!searchParameters || typeof searchParameters !== "string" || !searchParameters.trim()) {
-      const parsedPage = Math.max(1, parseInt(page) || 1);
-      const parsedLimit = Math.max(1, parseInt(limit) || 15);
-      const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
-      return successResponse(res, 200, "No search parameters were given", [], 0, meta);
-    }
+  const filters = {
+    title: data.title ?? true,
+    body: data.body ?? true,
+    comments: data.comments ?? true,
+    tags: data.tags ?? true,
+  };
 
-    const terms = searchParameters
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+  const parsedLimit = Math.max(1, parseInt(limit, 10) || 15);
 
-    if (terms.length === 0) {
-      const parsedPage = Math.max(1, parseInt(page) || 1);
-      const parsedLimit = Math.max(1, parseInt(limit) || 15);
-      const meta = buildPageMeta({ page: parsedPage, limit: parsedLimit, total: 0 });
-      return successResponse(res, 200, "No search parameters were given", [], 0, meta);
-    }
-
-    const { items, total, page: p, limit: l } = await postService.searchPosts(terms, {
-      language,
-      page,
-      limit,
-      sort,
+  if (
+    !searchParameters ||
+    typeof searchParameters !== "string" ||
+    !searchParameters.trim()
+  ) {
+    const meta = buildPageMeta({
+      page: parsedPage,
+      limit: parsedLimit,
+      total: 0,
     });
 
-    const meta = buildPageMeta({ page: p, limit: l, total });
+    return successResponse(
+      res,
+      200,
+      "No search parameters were given",
+      [],
+      0,
+      meta
+    );
+  }
 
-    const message = items.length > 0 ? "Posts retrieved successfully" : "No posts were found";
-    return successResponse(res, 200, message, items, items.length, meta);
+  const terms = searchParameters
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (terms.length === 0) {
+    const meta = buildPageMeta({
+      page: parsedPage,
+      limit: parsedLimit,
+      total: 0,
+    });
+
+    return successResponse(
+      res,
+      200,
+      "No search parameters were given",
+      [],
+      0,
+      meta
+    );
+  }
+
+  const { items, total, page: currentPage, limit: currentLimit } =
+    await postService.searchPosts(terms, {
+      language,
+      page: parsedPage,
+      limit: parsedLimit,
+      sort,
+      filters,
+    });
+
+  const meta = buildPageMeta({
+    page: currentPage,
+    limit: currentLimit,
+    total,
+  });
+
+  const message =
+    items.length > 0 ? "Posts retrieved successfully" : "No posts were found";
+
+  return successResponse(res, 200, message, items, items.length, meta);
 }
 
 async function toggleLike(req, res, next) {
