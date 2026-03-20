@@ -14,6 +14,7 @@ import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
 import emailService from "../services/emailService.js";
 import { toClientUser } from "../utils/toClientUser.js";
 import { LEGAL_VERSIONS } from "../constants.js";
+import { moderateFields } from "../utils/moderation.js";
 
 async function health(req, res, next) {
   successResponse(res, 200, "Health is ok");
@@ -26,11 +27,23 @@ async function registerUser(req, res, next) {
     return next(new CustomError(400, "You must accept the Terms and Rules"));
   }
 
+  const moderation = moderateFields({
+    username: username?.trim(),
+  });
+
+  if (moderation.blocked) {
+    return next(
+      new CustomError(400, "Username contains blocked language", [
+        { field: "username", message: "Contains inappropriate language" },
+      ])
+    );
+  }
+
   const hashedPassword = await hashPassword(password);
 
   const newUser = await userService.createUser(
-    username,
-    email,
+    username.trim(),
+    email.trim(),
     hashedPassword,
     {
       termsAcceptedAt: new Date(),
@@ -38,7 +51,7 @@ async function registerUser(req, res, next) {
     }
   );
 
-  // --- AUTO LOGIN ---
+  //Login user
   const { accessToken, refreshToken } = createTokens(newUser);
 
   const tokenData = createTokenData(req, refreshToken);
@@ -49,12 +62,11 @@ async function registerUser(req, res, next) {
 
   const clientUser = toClientUser(newUser);
 
-  successResponse(res, 201, "User created successfully", {
+  return successResponse(res, 201, "User created successfully", {
     accessToken,
     user: clientUser,
     needsEmailVerification: false,
   });
-
 }
 
 

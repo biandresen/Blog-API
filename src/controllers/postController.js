@@ -7,6 +7,7 @@ import successResponse from "../utils/successResponse.js";
 import { toClientUser } from "../utils/toClientUser.js";
 import { isSameUtcDay, isYesterdayUtc } from "../utils/date.js";
 import { buildPageMeta } from "../utils/paginationMeta.js";
+import { moderateFields } from "../utils/moderation.js";
 
 async function getAllPosts(req, res, next) {
     const language = req.language;
@@ -108,6 +109,23 @@ async function createPost(req, res, next) {
     const language = req.language;
 
     const { title, body, published, tags } = matchedData(req);
+
+     const moderation = moderateFields(
+    {
+      title,
+      body,
+      tags: Array.isArray(tags) ? tags.join(" ") : tags,
+    },
+  );
+
+    if (moderation.blocked) {
+    return next(
+      new CustomError(400, "Content contains blocked language", [
+        { field: "content", message: "Contains inappropriate language" },
+      ])
+    );
+  }
+
     const authorId = Number(req.user?.id);
     if (isNaN(authorId)) return next(new CustomError(401, "Unauthorized"));
 
@@ -134,6 +152,22 @@ async function updatePost(req, res, next) {
 
     const { title, body, published, tags } = matchedData(req);
     const normalizedTags = tags ? normalizeTags(tags) : undefined;
+
+    const moderation = moderateFields(
+    {
+      title,
+      body,
+      tags: Array.isArray(normalizedTags) ? normalizedTags.join(" ") : "",
+    },
+    );
+
+    if (moderation.blocked) {
+      return next(
+        new CustomError(400, "Content contains blocked language", [
+          { field: "content", message: "Contains inappropriate language" },
+        ])
+      );
+    }
 
     const updatedPost = await postService.updatePost(
       postId,

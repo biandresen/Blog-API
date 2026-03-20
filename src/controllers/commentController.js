@@ -3,6 +3,7 @@ import CustomError from "../utils/CustomError.js";
 import commentService from "../services/commentService.js";
 import successResponse from "../utils/successResponse.js";
 import { buildPageMeta } from "../utils/paginationMeta.js";
+import { moderateFields } from "../utils/moderation.js";
 
 async function createComment(req, res, next) {
   const postId = Number(req.params?.id);
@@ -17,6 +18,18 @@ async function createComment(req, res, next) {
 
   const language = req.language;
   const { comment: commentBody } = matchedData(req);
+
+  const moderation = moderateFields(
+  { comment: req.body.comment },
+);
+
+if (moderation.blocked) {
+  return next(
+    new CustomError(400, "Comment contains blocked language", [
+      { field: "comment", message: "Contains inappropriate language" },
+    ])
+  );
+}
 
   const comment = await commentService.createComment(
     postId,
@@ -78,6 +91,18 @@ async function editComment(req, res, next) {
   }
 
   const { comment: commentBody } = matchedData(req);
+
+  const moderation = moderateFields(
+    { comment: commentBody },
+  );
+
+  if (moderation.blocked) {
+    return next(
+      new CustomError(400, "Comment contains blocked language", [
+        { field: "comment", message: "Contains inappropriate language" },
+      ])
+    );
+  }
 
   const editedComment = await commentService.updateComment(
     commentId,

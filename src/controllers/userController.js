@@ -4,6 +4,7 @@ import CustomError from "../utils/CustomError.js";
 import successResponse from "../utils/successResponse.js";
 import userService from "../services/userService.js";
 import { toClientUser } from "../utils/toClientUser.js";
+import { moderateFields } from "../utils/moderation.js";
 
 async function getMe(req, res, next) {
   const userId = Number(req.user?.id);
@@ -58,6 +59,26 @@ async function updateUserProfile(req, res, next) {
   if (isNaN(userId)) return next(new CustomError(401, "Unauthorized"));
 
   const updateData = matchedData(req);
+
+  if (updateData.username) {
+    const moderation = moderateFields({
+      username: updateData.username.trim(),
+    });
+
+    if (moderation.blocked) {
+      return next(
+        new CustomError(400, "Username contains blocked language", [
+          { field: "username", message: "Contains inappropriate language" },
+        ])
+      );
+    }
+
+    updateData.username = updateData.username.trim();
+  }
+
+  if (updateData.email) {
+    updateData.email = updateData.email.trim();
+  }
 
   // Handle avatar upload
   if (req.processedImage?.relativeUrl) {
