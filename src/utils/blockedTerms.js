@@ -1,0 +1,96 @@
+export const profanityNO = [
+"faen",
+"føkk",
+"føkking",
+"føkkings",
+"jævlig",
+"jævla",
+"jævel",
+"jævler",
+"jævlene",
+"helvete",
+"helvetes",
+]
+
+export const insultsNO = [
+"mongo",
+"retardert",
+"rasshøl",
+"drittsekk",
+"dritsekk",
+"drittunge",
+"hore",
+"horer",
+"h0re",
+"neger",
+"nigger",
+"jævla utlending",
+"jævla homo",
+"jævla ape",
+"bøg",
+"homse",
+"pakkis",
+"horeunge"
+]
+
+export const sexualNO = [
+"knulle",
+"anus",
+"fitte",
+"fitta",
+"fitter",
+"kuk",
+"kuken",
+"kukk",
+"pikk",
+"ræv",
+"ræva",
+"ræven",
+"rævva",
+]
+
+export const profanityEN = [
+"fuck",
+"fucking",
+"fucker",
+"motherfucker",
+"shit",
+"shitty",
+"bullshit",
+"asshole",
+"asshole",
+"bitch",
+"bitches",
+"bastard",
+]
+
+export const insultsEN = [
+"idiot",
+"moron",
+"stupid",
+"dumb",
+"loser",
+"losers",
+"retard",
+"retarded",
+"clown",
+"freak",
+"weirdo",
+"nigger",
+"nigga",
+"faggot",
+"fag",
+"slut",
+"whore",
+"tranny",
+]
+
+export const sexualEN = [
+"dick",
+"dicks",
+"cock",
+"cocks",
+"pussy",
+"pussies",
+"cunt",
+]
