@@ -235,3 +235,15 @@ model PostLike {
   @@index([postId, createdAt])
   @@index([userId, createdAt])
 }
+
+model ModerationTerm {
+  id        Int      @id @default(autoincrement())
+  term      String   @unique
+  category  String?  // profanity, insult, sexual, slur, etc.
+  notes     String?  // for admin reference
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}

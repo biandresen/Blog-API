@@ -6,6 +6,7 @@ import tagRouter from "./tagRouter.js";
 import badgeRouter from "./badgeRouter.js"
 import featuredRouter from "./featuredRouter.js"
 import hallOfFameRouter from "./hallOfFameRouter.js"
+import moderationRouter from "./moderationRouter.js"
 
 export default {
   authRouter,
@@ -16,4 +17,5 @@ export default {
   badgeRouter,
   featuredRouter,
   hallOfFameRouter,
+  moderationRouter
 };

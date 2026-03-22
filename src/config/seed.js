@@ -1,80 +1,89 @@
 import prisma from "./prismaClient.js";
 
+const moderationTerms = [
+  // Norwegian profanity / insults / sexual / slurs
+  { term: "faen", category: "profanity" },
+  { term: "fanden", category: "profanity" },
+  { term: "jævla", category: "profanity" },
+  { term: "jævlig", category: "profanity" },
+  { term: "jævel", category: "profanity" },
+  { term: "helvete", category: "profanity" },
+  { term: "fitte", category: "sexual" },
+  { term: "kuk", category: "sexual" },
+  { term: "pikk", category: "sexual" },
+  { term: "hore", category: "slur" },
+  { term: "idiot", category: "insult" },
+  { term: "dum", category: "insult" },
+  { term: "dust", category: "insult" },
+  { term: "taper", category: "insult" },
+  { term: "mongo", category: "slur" },
+  { term: "retard", category: "slur" },
+  { term: "retardert", category: "slur" },
+  { term: "neger", category: "slur" },
+  { term: "pakkis", category: "slur" },
+  { term: "horeunge", category: "slur" },
+  { term: "knulle", category: "sexual" },
+  { term: "porno", category: "sexual" },
+
+  // English profanity / insults / sexual / slurs
+  { term: "fuck", category: "profanity" },
+  { term: "fucking", category: "profanity" },
+  { term: "fucker", category: "profanity" },
+  { term: "motherfucker", category: "profanity" },
+  { term: "shit", category: "profanity" },
+  { term: "bullshit", category: "profanity" },
+  { term: "asshole", category: "profanity" },
+  { term: "bitch", category: "slur" },
+  { term: "bastard", category: "insult" },
+  { term: "dick", category: "sexual" },
+  { term: "cock", category: "sexual" },
+  { term: "pussy", category: "sexual" },
+  { term: "cunt", category: "slur" },
+  { term: "moron", category: "insult" },
+  { term: "stupid", category: "insult" },
+  { term: "dumb", category: "insult" },
+  { term: "loser", category: "insult" },
+  { term: "clown", category: "insult" },
+  { term: "freak", category: "insult" },
+  { term: "weirdo", category: "insult" },
+  { term: "sex", category: "sexual" },
+  { term: "porn", category: "sexual" },
+  { term: "pornography", category: "sexual" },
+  { term: "dildo", category: "sexual" },
+  { term: "blowjob", category: "sexual" },
+  { term: "handjob", category: "sexual" },
+  { term: "nigger", category: "slur" },
+  { term: "nigga", category: "slur" },
+  { term: "faggot", category: "slur" },
+  { term: "fag", category: "slur" },
+  { term: "slut", category: "slur" },
+  { term: "whore", category: "slur" },
+  { term: "tranny", category: "slur" },
+];
+
 async function seed() {
   try {
-    // Clear existing data (optional for fresh seeding)
-    // await prisma.tag.deleteMany();
-    // await prisma.comment.deleteMany();
-    // await prisma.blogPost.deleteMany();
-    // await prisma.user.deleteMany();
-    // await prisma.$executeRaw`ALTER SEQUENCE "Tag_id_seq" RESTART WITH 1;`;
-    // await prisma.$executeRaw`ALTER SEQUENCE "Comment_id_seq" RESTART WITH 1;`;
-    // await prisma.$executeRaw`ALTER SEQUENCE "BlogPost_id_seq" RESTART WITH 1;`;
-    // await prisma.$executeRaw`ALTER SEQUENCE "User_id_seq" RESTART WITH 1;`;
-    //   // Create Users
-    //   const user1 = await prisma.user.create({
-    //     data: {
-    //       username: "johndoe",
-    //       email: "john@example.com",
-    //       password: "password123",
-    //       role: "USER",
-    //     },
-    //   });
-    //   const admin = await prisma.user.create({
-    //     data: {
-    //       username: "adminuser",
-    //       email: "admin@example.com",
-    //       password: "admin123",
-    //       role: "ADMIN",
-    //     },
-    //   });
-    //   // Create Tags
-    //   const tagTech = await prisma.tag.create({ data: { name: "Tech" } });
-    //   const tagLife = await prisma.tag.create({ data: { name: "Lifestyle" } });
-    //   // Create BlogPosts
-    //   const post1 = await prisma.blogPost.create({
-    //     data: {
-    //       title: "First Blog Post",
-    //       body: "This is the body of the first post.",
-    //       published: true,
-    //       authorId: user1.id,
-    //       tags: {
-    //         connect: [{ id: tagTech.id }, { id: tagLife.id }],
-    //       },
-    //     },
-    //   });
-    //   const post2 = await prisma.blogPost.create({
-    //     data: {
-    //       title: "Admin Post",
-    //       body: "Insights from an admin.",
-    //       published: true,
-    //       authorId: admin.id,
-    //       tags: {
-    //         connect: [{ id: tagTech.id }],
-    //       },
-    //     },
-    //   });
-    //   // Create Comments
-    //   await prisma.comment.create({
-    //     data: {
-    //       authorId: user1.id,
-    //       postId: post2.id,
-    //       body: "Great insights!",
-    //     },
-    //   });
-    //   await prisma.comment.create({
-    //     data: {
-    //       authorId: admin.id,
-    //       postId: post1.id,
-    //       body: "Nice blog post!",
-    //     },
-    //   });
-    //   console.log("✅ Seed data created successfully.");
-    // } catch (err) {
-    //   console.error("❌ Seeding failed:", err);
-    // } finally {
-    //   await prisma.$disconnect();
+    for (const item of moderationTerms) {
+      await prisma.moderationTerm.upsert({
+        where: { term: item.term.toLowerCase().trim() },
+        update: {
+          category: item.category,
+          isActive: true,
+        },
+        create: {
+          term: item.term.toLowerCase().trim(),
+          category: item.category,
+          isActive: true,
+        },
+      });
+    }
+
+    console.log(`Seeded ${moderationTerms.length} moderation terms`);
+  } catch (error) {
+    console.error("Failed to seed moderation terms:", error);
+    process.exitCode = 1;
   } finally {
+    await prisma.$disconnect();
     console.log("Seeding done");
   }
 }

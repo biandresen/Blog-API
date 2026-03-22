@@ -1,16 +1,4 @@
-import { insultsEN, insultsNO, profanityEN, profanityNO, sexualEN, sexualNO } from "./blockedTerms.js";
-
-const BLOCKED_TERMS = {
-  profanityNO,
-  insultsNO,
-  sexualNO,
-  profanityEN,
-  insultsEN,
-  sexualEN,
-};
-
-const ALL_BLOCKED = Object.values(BLOCKED_TERMS).flat();
-
+import moderationService from "../services/moderationService.js";
 
 const ZERO_WIDTH_REGEX = /[\u200B-\u200D\uFEFF]/g;
 const DIACRITICS_REGEX = /[\u0300-\u036f]/g;
@@ -61,12 +49,6 @@ function applyLeetMap(input = "") {
     .join("");
 }
 
-/**
- * Collapse very long repeated runs.
- * Example:
- * "coooool" -> "col"
- * Conservative enough to catch obvious stretching.
- */
 function collapseRepeatedChars(input = "") {
   return input.replace(/(.)\1{2,}/g, "$1");
 }
@@ -107,7 +89,6 @@ function matchesBlockedTerm(input, term, { aggressive = false } = {}) {
   const variants = buildInputVariants(input);
   const termVariants = buildTermVariants(term);
 
-  // 1. Normal word-boundary matching for readable text
   for (const variant of termVariants) {
     if (!variant) continue;
 
@@ -117,7 +98,6 @@ function matchesBlockedTerm(input, term, { aggressive = false } = {}) {
     }
   }
 
-  // 2. Joined/aggressive matching for obfuscation and usernames
   if (aggressive) {
     for (const variant of termVariants) {
       if (!variant) continue;
@@ -137,7 +117,9 @@ function matchesBlockedTerm(input, term, { aggressive = false } = {}) {
 }
 
 export function findBlockedTerms(input = "", { aggressive = false } = {}) {
-  return ALL_BLOCKED.filter((term) =>
+  const blockedTerms = moderationService.getModerationTermsFromCache();
+
+  return blockedTerms.filter((term) =>
     matchesBlockedTerm(input, term, { aggressive })
   );
 }
@@ -169,23 +151,3 @@ export function moderateFields(fields = {}) {
     matches: result,
   };
 }
-
-// export function moderateFields(fields = {}) {
-//   const result = {};
-
-//   for (const [field, value] of Object.entries(fields)) {
-//     if (typeof value !== "string" || !value.trim()) continue;
-
-//     const aggressive = field === "username";
-//     const matches = findBlockedTerms(value, { aggressive });
-
-//     if (matches.length > 0) {
-//       result[field] = matches;
-//     }
-//   }
-
-//   return {
-//     blocked: Object.keys(result).length > 0,
-//     matches: result,
-//   };
-// }
