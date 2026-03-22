@@ -8,16 +8,16 @@ export default class CustomError extends Error {
    * @param {string} message - Error message.
    * @param {Array<Object>} [errors=null] - Optional array of additional error details (e.g., validation errors).
    */
-
-  constructor(statusCode = 500, message = "Something went wrong", errors = null) {
+  constructor(statusCode = 500, message = "Something went wrong", errors = null, code = null) {
     super(message);
     this.name = this.constructor.name;
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith("4") ? "fail" : "error";
     this.isOperational = true;
-    if (errors) {
-      this.errors = errors;
-    }
+
+    if (errors) this.errors = errors;
+    if (code) this.code = code;
+
     Error.captureStackTrace(this, this.constructor);
   }
 }

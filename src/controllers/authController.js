@@ -9,12 +9,13 @@ import authService from "../services/authService.js";
 import successResponse from "../utils/successResponse.js";
 import createTokenData from "../utils/createTokenData.js";
 import REFRESH_TOKEN_COOKIE_SETTINGS from "../utils/refreshTokenCookieSettings.js";
-import createTokens from "../utils/createTokens.js";
 import CLEAR_COOKIE_SETTINGS from "../utils/clearCookieSettings.js";
 import emailService from "../services/emailService.js";
 import { toClientUser } from "../utils/toClientUser.js";
 import { LEGAL_VERSIONS } from "../constants.js";
 import { moderateFields } from "../utils/moderation.js";
+import sendEmailVerificationFlow from "../utils/sendEmailVerificationFlow.js";
+import createTokens from "../utils/createTokens.js";
 
 async function health(req, res, next) {
   successResponse(res, 200, "Health is ok");
@@ -39,50 +40,55 @@ async function registerUser(req, res, next) {
     );
   }
 
+  const normalizedUsername = username.trim();
+  const normalizedEmail = email.trim().toLowerCase();
   const hashedPassword = await hashPassword(password);
 
   const newUser = await userService.createUser(
-    username.trim(),
-    email.trim(),
+    normalizedUsername,
+    normalizedEmail,
     hashedPassword,
     {
       termsAcceptedAt: new Date(),
       termsVersion: LEGAL_VERSIONS.TERMS,
+      emailVerified: false,
     }
   );
 
-  //Login user
-  const { accessToken, refreshToken } = createTokens(newUser);
+  await sendEmailVerificationFlow(newUser, req);
 
-  const tokenData = createTokenData(req, refreshToken);
-
-  await authService.storeRefreshToken(newUser.id, tokenData);
-
-  res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
-
-  const clientUser = toClientUser(newUser);
-
-  return successResponse(res, 201, "User created successfully", {
-    accessToken,
-    user: clientUser,
-    needsEmailVerification: false,
+  return successResponse(res, 201, "User created successfully. Please verify your email.", {
+    needsEmailVerification: true,
+    email: newUser.email,
   });
 }
-
 
 async function loginUser(req, res, next) {
   const { userInput, password } = matchedData(req);
 
+  const normalizedUserInput = userInput.trim().toLowerCase();
+
   let user;
-  if (userInput.includes("@")) {
-    user = await userService.getUserByEmail(userInput);
+  if (normalizedUserInput.includes("@")) {
+    user = await userService.getUserByEmail(normalizedUserInput);
   } else {
-    user = await userService.getUserByUsername(userInput);
+    user = await userService.getUserByUsername(normalizedUserInput);
   }
 
   if (!user) return next(new CustomError(401, "Invalid credentials"));
 
-  if (!user?.active) return next(new CustomError(403, "User is inactive"));
+  if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+
+  if (!user.emailVerified) {
+    return next(
+      new CustomError(
+        403,
+        "Account is not verified through email yet",
+        [{ field: "email", message: "Email not verified" }],
+        "EMAIL_NOT_VERIFIED"
+      )
+    );
+  }
 
   const isMatch = await matchPassword(password, user.password);
   if (!isMatch) return next(new CustomError(401, "Invalid credentials"));
@@ -101,7 +107,6 @@ async function loginUser(req, res, next) {
   if (!fullUser) return next(new CustomError(404, "User not found"));
 
   const clientUser = toClientUser(fullUser);
-  console.log("AUTH: ", clientUser)
 
   successResponse(res, 200, "Login successful", {
     accessToken,
@@ -111,6 +116,7 @@ async function loginUser(req, res, next) {
 
 async function logoutUser(req, res, next) {
   const token = req.cookies?.refreshToken;
+
   if (token) {
     const decodedUser = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     if (!decodedUser) return next(new CustomError(400, "Invalid refresh token. Please login"));
@@ -132,11 +138,18 @@ async function refreshAccessToken(req, res, next) {
   const isValid = await authService.getRefreshToken(decodedUser.id, token);
   if (!isValid) return next(new CustomError(400, "Invalid refresh token. Please login"));
 
-  const { accessToken, refreshToken } = createTokens(decodedUser);
+  const user = await userService.getUserById(decodedUser.id);
+  if (!user) return next(new CustomError(404, "User not found"));
+  if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+  if (!user.emailVerified) {
+    return next(new CustomError(403, "Account is not verified through email yet", null, "EMAIL_NOT_VERIFIED"));
+  }
+
+  const { accessToken, refreshToken } = createTokens(user);
 
   const tokenData = createTokenData(req, refreshToken);
 
-  await authService.storeRefreshToken(decodedUser.id, tokenData);
+  await authService.storeRefreshToken(user.id, tokenData);
 
   res.cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_SETTINGS);
 
@@ -145,21 +158,19 @@ async function refreshAccessToken(req, res, next) {
 
 async function resetPassword(req, res, next) {
   const { email } = matchedData(req);
-  const FRONTEND_BASE_URL =
-  process.env.FRONTEND_BASE_URL || "https://bloggy-app.dev";
+  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || "https://bloggy-app.dev";
 
-  const user = await userService.getUserByEmail(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await userService.getUserByEmail(normalizedEmail);
+
   if (!user) return next(new CustomError(404, "User not found"));
   if (!user.active) return next(new CustomError(403, "User is inactive"));
 
-  // raw token sent to user
   const rawToken = crypto.randomBytes(32).toString("hex");
-
-  // hashed token stored
   const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
 
   const issuedAt = new Date();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   await authService.storeResetPasswordToken(user.id, {
     token: hashedToken,
@@ -183,8 +194,6 @@ async function processResetPassword(req, res, next) {
   if (!token) return next(new CustomError(400, "Invalid token"));
 
   const hashedPassword = await hashPassword(password);
-
-  // hash incoming token
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const record = await authService.getRecordFromResetPasswordToken(hashedToken);
@@ -195,13 +204,64 @@ async function processResetPassword(req, res, next) {
 
   if (record.expiresAt < new Date()) return next(new CustomError(400, "Token expired"));
 
-  // update password
   await userService.updateUser(record.userId, { password: hashedPassword });
-
-  // delete token
-  authService.deleteResetPasswordToken(record.id);
+  await authService.deleteResetPasswordToken(record.id);
 
   return successResponse(res, 200, "Password updated");
+}
+
+async function verifyEmail(req, res, next) {
+  const { token } = req.query;
+
+  if (!token || typeof token !== "string") {
+    return next(new CustomError(400, "Invalid token"));
+  }
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const record = await authService.getRecordFromEmailVerificationToken(hashedToken);
+  if (!record) return next(new CustomError(400, "Invalid or expired token", null, "INVALID_VERIFICATION_TOKEN"));
+
+  if (record.expiresAt < new Date()) {
+    return next(new CustomError(400, "Token expired", null, "EXPIRED_VERIFICATION_TOKEN"));
+  }
+
+  const user = await userService.getUserById(record.userId);
+  if (!user) return next(new CustomError(404, "User not found"));
+
+  if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+
+  if (!user.emailVerified) {
+    await userService.updateUser(user.id, {
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    });
+  }
+
+  await authService.deleteEmailVerificationToken(record.id);
+  await authService.deleteAllEmailVerificationTokensForUser(user.id);
+
+  return successResponse(res, 200, "Email verified successfully");
+}
+
+async function resendVerificationEmail(req, res, next) {
+  const { email } = matchedData(req);
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await userService.getUserByEmail(normalizedEmail);
+  if (!user) return next(new CustomError(404, "User not found"));
+
+  if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+
+  if (user.emailVerified) {
+    return next(new CustomError(400, "Email is already verified", null, "EMAIL_ALREADY_VERIFIED"));
+  }
+
+  await sendEmailVerificationFlow(user, req);
+
+  return successResponse(res, 200, "Verification email sent", {
+    email: user.email,
+  });
 }
 
 export default {
@@ -209,7 +269,9 @@ export default {
   registerUser,
   loginUser,
   logoutUser,
-  refreshAccessToken,
+ refreshAccessToken,
   resetPassword,
   processResetPassword,
+  verifyEmail,
+  resendVerificationEmail,
 };

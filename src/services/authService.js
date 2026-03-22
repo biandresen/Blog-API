@@ -1,28 +1,25 @@
 import prisma from "../config/prismaClient.js";
 
 async function storeResetPasswordToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
-  // 1. Delete any existing token for this user-agent
   await prisma.resetPasswordToken.deleteMany({
     where: {
       userId,
       userAgent,
     },
   });
-  // 2. Get all current tokens for the user
+
   const tokens = await prisma.resetPasswordToken.findMany({
     where: { userId },
     orderBy: { issuedAt: "asc" },
   });
 
-  // 3. If more than 4 exist, remove the oldest to stay under 5
   if (tokens.length >= 5) {
     await prisma.resetPasswordToken.delete({
       where: { id: tokens[0].id },
     });
   }
 
-  // 4. Create new token
-  return await prisma.resetPasswordToken.create({
+  return prisma.resetPasswordToken.create({
     data: {
       userId,
       token,
@@ -35,19 +32,18 @@ async function storeResetPasswordToken(userId, { token, issuedAt, expiresAt, use
 }
 
 async function getRecordFromResetPasswordToken(token) {
-  return await prisma.resetPasswordToken.findFirst({
+  return prisma.resetPasswordToken.findFirst({
     where: { token },
   });
 }
 
 async function deleteResetPasswordToken(id) {
-  return await prisma.resetPasswordToken.delete({
+  return prisma.resetPasswordToken.delete({
     where: { id },
   });
 }
 
 async function storeRefreshToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
-  // 1. Delete any existing token for this user-agent
   await prisma.refreshToken.deleteMany({
     where: {
       userId,
@@ -55,21 +51,18 @@ async function storeRefreshToken(userId, { token, issuedAt, expiresAt, userAgent
     },
   });
 
-  // 2. Get all current tokens for the user
   const tokens = await prisma.refreshToken.findMany({
     where: { userId },
     orderBy: { issuedAt: "asc" },
   });
 
-  // 3. If more than 4 exist, remove the oldest to stay under 5
   if (tokens.length >= 5) {
     await prisma.refreshToken.delete({
       where: { id: tokens[0].id },
     });
   }
 
-  // 4. Create new token
-  return await prisma.refreshToken.create({
+  return prisma.refreshToken.create({
     data: {
       userId,
       token,
@@ -79,21 +72,66 @@ async function storeRefreshToken(userId, { token, issuedAt, expiresAt, userAgent
       ipAddress,
     },
   });
-  // Allows max 5 refresh tokens per user.
-  // Ensures 1 active token per device (userAgent).
-  // Cleans up oldest token if over the limit.
-  // Prevents duplicates per device.
 }
 
 async function deleteRefreshToken(userId, token) {
-  await prisma.refreshToken.deleteMany({
+  return prisma.refreshToken.deleteMany({
     where: { userId, token },
   });
 }
 
 async function getRefreshToken(userId, token) {
-  return await prisma.refreshToken.findFirst({
+  return prisma.refreshToken.findFirst({
     where: { userId, token },
+  });
+}
+
+async function storeEmailVerificationToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
+  await prisma.emailVerificationToken.deleteMany({
+    where: {
+      userId,
+      userAgent,
+    },
+  });
+
+  const tokens = await prisma.emailVerificationToken.findMany({
+    where: { userId },
+    orderBy: { issuedAt: "asc" },
+  });
+
+  if (tokens.length >= 5) {
+    await prisma.emailVerificationToken.delete({
+      where: { id: tokens[0].id },
+    });
+  }
+
+  return prisma.emailVerificationToken.create({
+    data: {
+      userId,
+      token,
+      issuedAt,
+      expiresAt,
+      userAgent,
+      ipAddress,
+    },
+  });
+}
+
+async function getRecordFromEmailVerificationToken(token) {
+  return prisma.emailVerificationToken.findFirst({
+    where: { token },
+  });
+}
+
+async function deleteEmailVerificationToken(id) {
+  return prisma.emailVerificationToken.delete({
+    where: { id },
+  });
+}
+
+async function deleteAllEmailVerificationTokensForUser(userId) {
+  return prisma.emailVerificationToken.deleteMany({
+    where: { userId },
   });
 }
 
@@ -104,4 +142,8 @@ export default {
   storeResetPasswordToken,
   getRecordFromResetPasswordToken,
   deleteResetPasswordToken,
+  storeEmailVerificationToken,
+  getRecordFromEmailVerificationToken,
+  deleteEmailVerificationToken,
+  deleteAllEmailVerificationTokensForUser,
 };

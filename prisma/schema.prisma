@@ -108,11 +108,15 @@ model User {
   active                Boolean              @default(true)
   role                  Role                 @default(USER)
 
+  emailVerified         Boolean              @default(false)
+  emailVerifiedAt       DateTime?
+
   blogPosts             BlogPost[]
   comments              Comment[]
   likes                 PostLike[]
   refreshTokens         RefreshToken[]
   resetPasswordTokens   ResetPasswordToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @default(now()) @updatedAt
@@ -122,7 +126,6 @@ model User {
   termsVersion          String?
   preferredLanguage     Language             @default(NO)
 
-  // streak is global (as you decided)
   dailyJokeStreak       Int                  @default(0)
   dailyJokeLastViewedAt DateTime?
   dailyJokeBestStreak   Int                  @default(0)
@@ -190,6 +193,22 @@ model Tag {
   @@unique([language, name])
 }
 
+model PostLike {
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // one like per user per post
+  @@unique([postId, userId])
+
+  // common lookups
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    Int
@@ -220,20 +239,19 @@ model ResetPasswordToken {
   @@index([expiresAt])
 }
 
-model PostLike {
-  postId    Int
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
   userId    Int
-  createdAt DateTime @default(now())
+  token     String   @unique
+  issuedAt  DateTime
+  expiresAt DateTime
+  userAgent String?
+  ipAddress String?
 
-  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // one like per user per post
-  @@unique([postId, userId])
-
-  // common lookups
-  @@index([postId, createdAt])
-  @@index([userId, createdAt])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model ModerationTerm {

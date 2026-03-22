@@ -21,8 +21,8 @@ const registerUserValidator = [
     .trim()
     .isEmail()
     .withMessage("Not a valid email address")
-    .isLength({ min: 5, max: 32 })
-    .withMessage("Email must be between 5-32 characters")
+    .isLength({ min: 5, max: 64 })
+    .withMessage("Email must be between 5-64 characters")
     .custom(async (value) => {
       const user = await userService.getUserByEmail(value);
       if (user) {

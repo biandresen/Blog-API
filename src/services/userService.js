@@ -52,16 +52,30 @@ async function updateUser(userId, updateData = {}) {
   if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
   if (updateData.avatar !== undefined) fieldsToUpdate.avatar = updateData.avatar;
 
-  if (updateData.preferredLanguage !== undefined)
+  if (updateData.preferredLanguage !== undefined) {
     fieldsToUpdate.preferredLanguage = updateData.preferredLanguage;
+  }
 
-  // streak fields (global)
+  if (updateData.emailVerified !== undefined) {
+    fieldsToUpdate.emailVerified = updateData.emailVerified;
+  }
+
+  if (updateData.emailVerifiedAt !== undefined) {
+    fieldsToUpdate.emailVerifiedAt = updateData.emailVerifiedAt;
+  }
+
+  if (updateData.active !== undefined) {
+    fieldsToUpdate.active = updateData.active;
+  }
+
+  if (updateData.deletedAt !== undefined) {
+    fieldsToUpdate.deletedAt = updateData.deletedAt;
+  }
+
   if (updateData.dailyJokeStreak !== undefined) fieldsToUpdate.dailyJokeStreak = updateData.dailyJokeStreak;
   if (updateData.dailyJokeBestStreak !== undefined) fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
   if (updateData.dailyJokeLastViewedAt !== undefined) fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
 
-  // IMPORTANT: do NOT include currentBadges here.
-  // update responses should not leak NO/EN badge slices.
   return prisma.user.update({
     where: { id: userId },
     data: fieldsToUpdate,

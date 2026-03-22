@@ -5,6 +5,9 @@ export function toClientUser(user) {
     email: user.email,
     avatar: user.avatar,
     role: user.role,
+    active: user.active,
+    emailVerified: user.emailVerified,
+    emailVerifiedAt: user.emailVerifiedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     termsAcceptedAt: user.termsAcceptedAt,
@@ -15,7 +18,6 @@ export function toClientUser(user) {
     dailyJokeLastViewedAt: user.dailyJokeLastViewedAt,
   };
 
-  // Only include currentBadges if it was actually loaded from DB.
   if (Array.isArray(user.currentBadges)) {
     client.currentBadges = user.currentBadges.map((b) => ({
       id: b.id,
@@ -23,7 +25,7 @@ export function toClientUser(user) {
       since: b.since,
       validTo: b.validTo,
       context: b.context,
-      language: b.language, // optional; handy for debugging
+      language: b.language,
     }));
   }
 
