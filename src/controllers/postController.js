@@ -8,6 +8,8 @@ import { toClientUser } from "../utils/toClientUser.js";
 import { isSameUtcDay, isYesterdayUtc } from "../utils/date.js";
 import { buildPageMeta } from "../utils/paginationMeta.js";
 import { moderateFields } from "../utils/moderation.js";
+import logService from "../services/logService.js";
+import { getModerationLogData } from "../utils/moderationLogData.js";
 
 async function getAllPosts(req, res, next) {
     const language = req.language;
@@ -118,7 +120,21 @@ async function createPost(req, res, next) {
     },
   );
 
-    if (moderation.blocked) {
+   if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "create_post",
+      blocked: true,
+      fieldNames: ["title", "body", "tags"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
     return next(
       new CustomError(400, "Content contains blocked language", [
         { field: "content", message: "Contains inappropriate language" },
@@ -141,6 +157,21 @@ async function createPost(req, res, next) {
     );
 
     const message = published === true ? "Post was successfully published" : "Post was successfully drafted";
+
+    if (createdPost?.published) {
+      await logService.createProductEvent({
+        userId: authorId,
+        type: "POST_PUBLISHED",
+        path: req.originalUrl,
+        language: createdPost.language,
+        metadata: {
+          postId: createdPost.id,
+        },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || null,
+      });
+    }
+
     return successResponse(res, 200, message, createdPost, 1);
 }
 
@@ -161,13 +192,27 @@ async function updatePost(req, res, next) {
     },
     );
 
-    if (moderation.blocked) {
-      return next(
-        new CustomError(400, "Content contains blocked language", [
-          { field: "content", message: "Contains inappropriate language" },
-        ])
-      );
-    }
+  if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "create_post",
+      blocked: true,
+      fieldNames: ["title", "body", "tags"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
+    return next(
+      new CustomError(400, "Content contains blocked language", [
+        { field: "content", message: "Contains inappropriate language" },
+      ])
+    );
+  }
 
     const updatedPost = await postService.updatePost(
       postId,
@@ -237,6 +282,19 @@ async function publishDraft(req, res, next) {
     const published = await postService.publishDraft(postId, { language });
     if (!published) return next(new CustomError(404, "Draft not found for this language"));
 
+    await logService.createProductEvent({
+      userId: Number(req.user?.id) || null,
+      type: "POST_PUBLISHED",
+      path: req.originalUrl,
+      language,
+      metadata: {
+        postId,
+        source: "publish_draft",
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
     return successResponse(res, 200, "Draft successfully published");
 }
 
@@ -289,14 +347,21 @@ async function searchPosts(req, res, next) {
       total: 0,
     });
 
-    return successResponse(
-      res,
-      200,
-      "No search parameters were given",
-      [],
-      0,
-      meta
-    );
+    await logService.createProductEvent({
+      userId: Number(req.user?.id) || null,
+      type: "SEARCH_EXECUTED",
+      path: req.originalUrl,
+      language,
+      metadata: {
+        queryLength: searchParameters.trim().length,
+        filters,
+        resultCount: items.length,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
+    return successResponse(res,200, "No search parameters were given", [], 0, meta);
   }
 
   const { items, total, page: currentPage, limit: currentLimit } =
@@ -377,6 +442,19 @@ async function recordDailyJokeView(req, res, next) {
     dailyJokeStreak: newStreak,
     dailyJokeBestStreak: best,
     dailyJokeLastViewedAt: now,
+  });
+
+  await logService.createProductEvent({
+    userId,
+    type: "DAILY_JOKE_VIEW",
+    path: req.originalUrl,
+    language: req.language || null,
+    metadata: {
+      streak: updated.dailyJokeStreak,
+      bestStreak: updated.dailyJokeBestStreak,
+    },
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
   });
 
   return successResponse(res, 200, "Daily joke view recorded", {

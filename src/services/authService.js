@@ -1,4 +1,5 @@
 import prisma from "../config/prismaClient.js";
+import logService from "../services/logService.js";
 
 async function storeResetPasswordToken(userId, { token, issuedAt, expiresAt, userAgent, ipAddress }) {
   await prisma.resetPasswordToken.deleteMany({

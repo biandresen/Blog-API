@@ -16,6 +16,8 @@ import { LEGAL_VERSIONS } from "../constants.js";
 import { moderateFields } from "../utils/moderation.js";
 import sendEmailVerificationFlow from "../utils/sendEmailVerificationFlow.js";
 import createTokens from "../utils/createTokens.js";
+import logService from "../services/logService.js";
+import { getModerationLogData } from "../utils/moderationLogData.js";
 
 async function health(req, res, next) {
   successResponse(res, 200, "Health is ok");
@@ -33,9 +35,23 @@ async function registerUser(req, res, next) {
   });
 
   if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "create_post",
+      blocked: true,
+      fieldNames: ["title", "body", "tags"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
     return next(
-      new CustomError(400, "Username contains blocked language", [
-        { field: "username", message: "Contains inappropriate language" },
+      new CustomError(400, "Content contains blocked language", [
+        { field: "content", message: "Contains inappropriate language" },
       ])
     );
   }
@@ -56,6 +72,18 @@ async function registerUser(req, res, next) {
   );
 
   await sendEmailVerificationFlow(newUser, req);
+
+  await logService.createProductEvent({
+    userId: newUser.id,
+    type: "REGISTER_SUCCESS",
+    path: req.originalUrl,
+    language: newUser.preferredLanguage,
+    metadata: {
+      emailVerified: newUser.emailVerified,
+    },
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+  });
 
   return successResponse(res, 201, "User created successfully. Please verify your email.", {
     needsEmailVerification: true,
@@ -107,6 +135,16 @@ async function loginUser(req, res, next) {
   if (!fullUser) return next(new CustomError(404, "User not found"));
 
   const clientUser = toClientUser(fullUser);
+
+  await logService.createProductEvent({
+    userId: user.id,
+    type: "LOGIN_SUCCESS",
+    path: req.originalUrl,
+    language: fullUser.preferredLanguage,
+    metadata: null,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+  });
 
   successResponse(res, 200, "Login successful", {
     accessToken,
@@ -241,6 +279,16 @@ async function verifyEmail(req, res, next) {
   await authService.deleteEmailVerificationToken(record.id);
   await authService.deleteAllEmailVerificationTokensForUser(user.id);
 
+  await logService.createProductEvent({
+    userId: user.id,
+    type: "EMAIL_VERIFIED",
+    path: req.originalUrl,
+    language: user.preferredLanguage,
+    metadata: null,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+  });
+
   return successResponse(res, 200, "Email verified successfully");
 }
 
@@ -269,7 +317,7 @@ export default {
   registerUser,
   loginUser,
   logoutUser,
- refreshAccessToken,
+  refreshAccessToken,
   resetPassword,
   processResetPassword,
   verifyEmail,

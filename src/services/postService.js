@@ -281,19 +281,10 @@ async function getRandomPost({ language } = {}) {
   return post ?? null;
 }
 
-/**
- * Daily joke selection is now per-language:
- * - featured lookup includes language
- * - deterministic index is based on date + language (via total in that language partition)
- * - excludes yesterday's daily joke for same language (when possible)
- */
 async function getDailyPost({ language } = {}) {
   const lang = normalizeLanguage(language);
-
   const dayUtc = startOfUtcDay(new Date());
-  const yesterdayUtc = startOfUtcDay(new Date(dayUtc.getTime() - 24 * 60 * 60 * 1000));
 
-  // 1) Already selected today for this language?
   const existing = await prisma.featuredPost.findUnique({
     where: {
       type_date_language: {
@@ -305,69 +296,9 @@ async function getDailyPost({ language } = {}) {
     select: { postId: true },
   });
 
-  if (existing?.postId) {
-    return getPostById(existing.postId, { language: lang, published: true });
-  }
+  if (!existing?.postId) return null;
 
-  // 2) Get yesterday's selected postId (if any) for this language
-  const yesterday = await prisma.featuredPost.findUnique({
-    where: {
-      type_date_language: {
-        type: FEATURED_POST.DAILY,
-        date: yesterdayUtc,
-        language: lang,
-      },
-    },
-    select: { postId: true },
-  });
-  const yesterdayPostId = yesterday?.postId ?? null;
-
-  // 3) Count published posts in this language (optionally excluding yesterday)
-  const whereBase = { language: lang, published: true };
-  const whereExcludingYesterday =
-    yesterdayPostId != null ? { ...whereBase, id: { not: yesterdayPostId } } : whereBase;
-
-  const totalExcl = await prisma.blogPost.count({ where: whereExcludingYesterday });
-  const canExcludeYesterday = yesterdayPostId != null && totalExcl > 0;
-
-  const finalWhere = canExcludeYesterday ? whereExcludingYesterday : whereBase;
-  const total = canExcludeYesterday ? totalExcl : await prisma.blogPost.count({ where: whereBase });
-
-  if (total === 0) return null;
-
-  // 4) Deterministic pick for this language partition
-  const index = deterministicIndex(dayUtc, total);
-
-  const picked = await prisma.blogPost.findMany({
-    where: finalWhere,
-    orderBy: { id: "asc" },
-    skip: index,
-    take: 1,
-    select: { id: true, authorId: true },
-  });
-
-  const post = picked[0];
-  if (!post) return null;
-
-  // 5) Persist selection + award badge once/day PER language
-  try {
-    await prisma.featuredPost.create({
-      data: { type: FEATURED_POST.DAILY, date: dayUtc, postId: post.id, language: lang },
-    });
-
-    await badgeService.awardJokeOfTheDayToAuthor({
-      authorId: post.authorId,
-      postId: post.id,
-      dayUtc,
-      language: lang,
-    });
-  } catch (e) {
-    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) {
-      throw e;
-    }
-  }
-
-  return getPostById(post.id, { language: lang, published: true });
+  return getPostById(existing.postId, { language: lang, published: true });
 }
 
 async function createPost(

@@ -10,7 +10,6 @@
  */
 
 function createUserPayload(user) {
-  console.log(user);
   return { id: user.id, username: user.username, email: user.email, avatar: user.avatar, role: user.role };
 }
 

@@ -1,5 +1,3 @@
-// Prisma schema (language-scoped NO/EN across content + rankings + featured + badges)
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -37,6 +35,27 @@ enum BadgeKey {
   STREAK
 }
 
+enum AuditAction {
+  USER_DEACTIVATED
+  USER_REACTIVATED
+  USER_ROLE_CHANGED
+  MODERATION_TERM_CREATED
+  MODERATION_TERM_UPDATED
+  MODERATION_TERM_DEACTIVATED
+  MODERATION_CACHE_RELOADED
+  FEATURE_RECOMPUTE_TRIGGERED
+}
+
+enum ProductEventType {
+  REGISTER_SUCCESS
+  EMAIL_VERIFIED
+  LOGIN_SUCCESS
+  DAILY_JOKE_VIEW
+  POST_PUBLISHED
+  COMMENT_CREATED
+  SEARCH_EXECUTED
+}
+
 model BadgeAward {
   id        String   @id @default(uuid())
   userId    Int
@@ -49,10 +68,7 @@ model BadgeAward {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // one award per user+badge+period start per language
   @@unique([userId, badge, validFrom, language])
-
-  // common queries: user history by language, badge leaderboards by language
   @@index([userId, language, awardedAt])
   @@index([badge, language, awardedAt])
   @@index([language, awardedAt])
@@ -69,9 +85,7 @@ model CurrentUserBadge {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // one "current" badge per user+badge per language
   @@unique([userId, badge, language])
-
   @@index([userId, language])
   @@index([badge, language])
 }
@@ -80,86 +94,80 @@ model FeaturedPost {
   id        Int         @id @default(autoincrement())
   type      FeatureType
   language  Language    @default(NO)
-
-  // store day as midnight UTC (or period start for week/month features)
   date      DateTime
   postId    Int
   createdAt DateTime    @default(now())
 
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  // ensures: daily joke / trending / etc is unique PER language
   @@unique([type, date, language])
-
-  // main lookup patterns
   @@index([language, type, date])
   @@index([language, date])
-
-  // audits and reverse lookups
   @@index([postId])
 }
 
 model User {
-  id                    Int                  @id @default(autoincrement())
-  username              String               @unique
-  email                 String               @unique
-  password              String
-  avatar                String?
-  active                Boolean              @default(true)
-  role                  Role                 @default(USER)
+  id                      Int                      @id @default(autoincrement())
+  username                String                   @unique
+  email                   String                   @unique
+  password                String
+  avatar                  String?
+  active                  Boolean                  @default(true)
+  role                    Role                     @default(USER)
 
-  emailVerified         Boolean              @default(false)
-  emailVerifiedAt       DateTime?
+  emailVerified           Boolean                  @default(false)
+  emailVerifiedAt         DateTime?
 
-  blogPosts             BlogPost[]
-  comments              Comment[]
-  likes                 PostLike[]
-  refreshTokens         RefreshToken[]
-  resetPasswordTokens   ResetPasswordToken[]
+  blogPosts               BlogPost[]
+  comments                Comment[]
+  likes                   PostLike[]
+  refreshTokens           RefreshToken[]
+  resetPasswordTokens     ResetPasswordToken[]
   emailVerificationTokens EmailVerificationToken[]
 
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @default(now()) @updatedAt
-  deletedAt             DateTime?
+  moderationEvents        ModerationEvent[]
+  productEvents           ProductEvent[]
 
-  termsAcceptedAt       DateTime?
-  termsVersion          String?
-  preferredLanguage     Language             @default(NO)
+  auditLogsAsActor        AuditLog[]               @relation("AuditActor")
+  auditLogsAsTarget       AuditLog[]               @relation("AuditTarget")
 
-  dailyJokeStreak       Int                  @default(0)
-  dailyJokeLastViewedAt DateTime?
-  dailyJokeBestStreak   Int                  @default(0)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @default(now()) @updatedAt
+  deletedAt               DateTime?
 
-  currentBadges         CurrentUserBadge[]
-  badgeAwards           BadgeAward[]
+  termsAcceptedAt         DateTime?
+  termsVersion            String?
+  preferredLanguage       Language                 @default(NO)
+
+  dailyJokeStreak         Int                      @default(0)
+  dailyJokeLastViewedAt   DateTime?
+  dailyJokeBestStreak     Int                      @default(0)
+
+  currentBadges           CurrentUserBadge[]
+  badgeAwards             BadgeAward[]
 }
 
 model BlogPost {
-  id        Int        @id @default(autoincrement())
-  authorId  Int
-  language  Language   @default(NO)
+  id         Int            @id @default(autoincrement())
+  authorId   Int
+  language   Language       @default(NO)
 
-  title     String
-  body      String
-  published Boolean    @default(false)
+  title      String
+  body       String
+  published  Boolean        @default(false)
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @default(now()) @updatedAt
 
-  user      User       @relation(fields: [authorId], references: [id])
-  comments  Comment[]
-  likes     PostLike[]
-  tags      Tag[]      @relation("PostTags")
+  user       User           @relation(fields: [authorId], references: [id])
+  comments   Comment[]
+  likes      PostLike[]
+  tags       Tag[]          @relation("PostTags")
   featuredIn FeaturedPost[]
 
-  // feed/explore pages
   @@index([language, published, createdAt])
   @@index([language, published, updatedAt])
-
-  // deterministic/random selection benefits
   @@index([language, published, id])
-
-  // author profile pages per language
   @@index([authorId, language, createdAt])
 }
 
@@ -175,7 +183,6 @@ model Comment {
   user User     @relation(fields: [authorId], references: [id])
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  // paginated comments for a post
   @@index([postId, createdAt])
 }
 
@@ -189,7 +196,6 @@ model Tag {
 
   posts     BlogPost[] @relation("PostTags")
 
-  // tag unique per language
   @@unique([language, name])
 }
 
@@ -201,10 +207,7 @@ model PostLike {
   post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // one like per user per post
   @@unique([postId, userId])
-
-  // common lookups
   @@index([postId, createdAt])
   @@index([userId, createdAt])
 }
@@ -257,11 +260,72 @@ model EmailVerificationToken {
 model ModerationTerm {
   id        Int      @id @default(autoincrement())
   term      String   @unique
-  category  String?  // profanity, insult, sexual, slur, etc.
-  notes     String?  // for admin reference
+  category  String?
+  notes     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([isActive])
+}
+
+model ModerationEvent {
+  id              String   @id @default(cuid())
+  userId          Int?
+  action          String
+  blocked         Boolean  @default(true)
+  fieldNames      String[]
+  matchedTerms    String[]
+  matchedVariants String[]
+  contentPreview  String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  actorUserId  Int?
+  targetUserId Int?
+  action       AuditAction
+  entityType   String
+  entityId     String?
+  summary      String
+  diff         Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  actorUser    User?       @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  targetUser   User?       @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+model ProductEvent {
+  id         String           @id @default(cuid())
+  userId      Int?
+  type       ProductEventType
+  path       String?
+  language   Language?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime         @default(now())
+
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([language, createdAt])
+  @@index([createdAt])
 }

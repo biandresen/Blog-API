@@ -129,9 +129,16 @@ async function getPublicModerationTerms() {
   return terms;
 }
 
+async function getModerationTermById(id) {
+  const term = await prisma.moderationTerm.findUnique({where: {id}}
+  )
+  return term
+}
+
 export default {
   loadModerationTerms,
   ensureModerationTermsLoaded,
+  getModerationTermById,
   getModerationTermsFromCache,
   getModerationCacheMeta,
   getAllModerationTerms,

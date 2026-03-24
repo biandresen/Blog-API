@@ -4,6 +4,8 @@ import commentService from "../services/commentService.js";
 import successResponse from "../utils/successResponse.js";
 import { buildPageMeta } from "../utils/paginationMeta.js";
 import { moderateFields } from "../utils/moderation.js";
+import logService from "../services/logService.js";
+import { getModerationLogData } from "../utils/moderationLogData.js";
 
 async function createComment(req, res, next) {
   const postId = Number(req.params?.id);
@@ -21,15 +23,29 @@ async function createComment(req, res, next) {
 
   const moderation = moderateFields(
   { comment: req.body.comment },
-);
-
-if (moderation.blocked) {
-  return next(
-    new CustomError(400, "Comment contains blocked language", [
-      { field: "comment", message: "Contains inappropriate language" },
-    ])
   );
-}
+
+  if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "create_post",
+      blocked: true,
+      fieldNames: ["title", "body", "tags"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
+    return next(
+      new CustomError(400, "Content contains blocked language", [
+        { field: "content", message: "Contains inappropriate language" },
+      ])
+    );
+  }
 
   const comment = await commentService.createComment(
     postId,
@@ -41,6 +57,19 @@ if (moderation.blocked) {
   if (!comment) {
     return next(new CustomError(404, "Post not found for this language"));
   }
+
+  await logService.createProductEvent({
+    userId: authorId,
+    type: "COMMENT_CREATED",
+    path: req.originalUrl,
+    language,
+    metadata: {
+      postId,
+      commentId: comment.id,
+    },
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+  });
 
   return successResponse(res, 201, "Comment created successfully", comment);
 }
@@ -97,9 +126,23 @@ async function editComment(req, res, next) {
   );
 
   if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "create_post",
+      blocked: true,
+      fieldNames: ["title", "body", "tags"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
+
     return next(
-      new CustomError(400, "Comment contains blocked language", [
-        { field: "comment", message: "Contains inappropriate language" },
+      new CustomError(400, "Content contains blocked language", [
+        { field: "content", message: "Contains inappropriate language" },
       ])
     );
   }

@@ -15,6 +15,12 @@ async function getUserById(id, { language } = {}) {
   });
 }
 
+async function getUserByIdIncludingInactive(id) {
+  return prisma.user.findUnique({
+    where: { id },
+  });
+}
+
 async function getUserByUsername(username) {
   return prisma.user.findFirst({
     where: {
@@ -111,6 +117,7 @@ async function reactivateUser(userId) {
 
 export default {
   getUserById,
+  getUserByIdIncludingInactive,
   getUserByUsername,
   getUserByEmail,
   createUser,
