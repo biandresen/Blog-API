@@ -34,27 +34,27 @@ async function registerUser(req, res, next) {
     username: username?.trim(),
   });
 
-  if (moderation.blocked) {
-    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+if (moderation.blocked) {
+  const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
 
-    await logService.createModerationEvent({
-      userId: Number(req.user?.id) || null,
-      action: "create_post",
-      blocked: true,
-      fieldNames: ["title", "body", "tags"],
-      matchedTerms,
-      matchedVariants,
-      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"] || null,
-    });
+  await logService.createModerationEvent({
+    userId: Number(req.user?.id) || null,
+    action: "register_username",
+    blocked: true,
+    fieldNames: ["username"],
+    matchedTerms,
+    matchedVariants,
+    contentPreview: username?.trim()?.slice(0, 160) || null,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+  });
 
-    return next(
-      new CustomError(400, "Content contains blocked language", [
-        { field: "content", message: "Contains inappropriate language" },
-      ])
-    );
-  }
+  return next(
+    new CustomError(400, "Username contains blocked language", [
+      { field: "username", message: "Contains inappropriate language" },
+    ])
+  );
+}
 
   const normalizedUsername = username.trim();
   const normalizedEmail = email.trim().toLowerCase();
@@ -196,7 +196,7 @@ async function refreshAccessToken(req, res, next) {
 
 async function resetPassword(req, res, next) {
   const { email } = matchedData(req);
-  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || "https://bloggy-app.dev";
+  const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || "https://pundad.app";
 
   const normalizedEmail = email.trim().toLowerCase();
   const user = await userService.getUserByEmail(normalizedEmail);
@@ -220,7 +220,7 @@ async function resetPassword(req, res, next) {
 
   const resetUrl = `${FRONTEND_BASE_URL}/reset-password/${rawToken}`;
 
-  await emailService.sendResetPasswordEmail(user.email, resetUrl);
+  await emailService.sendResetPasswordEmail(user.email, resetUrl, req.language);
 
   return successResponse(res, 200, "Reset password email sent", email);
 }
