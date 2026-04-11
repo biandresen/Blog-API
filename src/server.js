@@ -5,6 +5,8 @@ import moderationService from "./services/moderationService.js";
 import logger from "./config/logger.js";
 
 const port = process.env.PORT || 4000;
+//127.0.0.1 is the local port. 0.0.0.0 is like localhost
+const host = process.env.NODE_ENV === "production" ? "127.0.0.1" : "0.0.0.0";
 
 process.on("unhandledRejection", (reason) => {
   logger.error(
@@ -49,13 +51,13 @@ async function startServer() {
       "Moderation cache loaded"
     );
 
-    app.listen(port, "127.0.0.1", () => {
+    app.listen(port, host, () => {
       logger.info(
         {
           event: "server_started",
           port,
           env: process.env.NODE_ENV,
-          host: "127.0.0.1",
+          host,
         },
         "Server started"
       );

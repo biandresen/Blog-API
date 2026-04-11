@@ -94,7 +94,11 @@ app.use(
     etag: true,
     lastModified: true,
     setHeaders: (res) => {
-      res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+      if (process.env.NODE_ENV === "production") {
+        res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+      } else {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      }
     },
   })
 );

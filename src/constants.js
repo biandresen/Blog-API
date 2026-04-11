@@ -4,9 +4,9 @@ export const ROLES = {
 };
 
 export const CORS_ORIGINS = [
-  "https://bloggy-app.dev",
+  "https://pundad.app",
   "http://localhost:5173",
-  "http://localhost:5174",
+  "http://127.0.0.1:5173",
 ];
 
 export const MAX_CHARS = {

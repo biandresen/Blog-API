@@ -5,15 +5,15 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "NODE_ENV=production node src/server.js",
-    "start:worker": "NODE_ENV=production node src/jobs/worker.js",
+    "start": "PORT=4000 NODE_ENV=production LOG_LEVEL=info node src/server.js",
+    "start:worker": "NODE_ENV=production LOG_LEVEL=info node src/jobs/worker.js",
 
-    "dev": "NODE_ENV=development node --watch src/server.js",
-    "dev:api": "NODE_ENV=development node src/server.js",
-    "dev:worker": "NODE_ENV=development node src/jobs/worker.js",
-    "dev:runOnce": "NODE_ENV=development node src/jobs/runOnce.js",
+    "dev": "PORT=4001 NODE_ENV=development LOG_LEVEL=debug node --watch src/server.js",
+    "dev:api": "PORT=4001 NODE_ENV=development LOG_LEVEL=debug node src/server.js",
+    "dev:worker": "NODE_ENV=development LOG_LEVEL=debug node src/jobs/worker.js",
+    "dev:runOnce": "NODE_ENV=development LOG_LEVEL=debug node src/jobs/runOnce.js",
 
-    "prod:test:api": "NODE_ENV=production LOG_LEVEL=info node src/server.js",
+    "prod:test:api": "PORT=4000 NODE_ENV=production LOG_LEVEL=info node src/server.js",
     "prod:test:worker": "NODE_ENV=production LOG_LEVEL=info node src/jobs/worker.js",
     "prod:test:runOnce": "NODE_ENV=production LOG_LEVEL=info node src/jobs/runOnce.js",
 
