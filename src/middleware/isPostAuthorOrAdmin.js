@@ -12,7 +12,7 @@ async function isAuthorOrAdmin(req, res, next) {
     return next(new CustomError(400, "Invalid post id given"));
   }
 
-  const post = await postService.getPostById(postId, { language });
+  const post = await postService.getPostById(postId, { language, requesterId: userId, requesterRole: role });
   if (!post) {
     return next(new CustomError(404, `No post found with id ${postId}`));
   }

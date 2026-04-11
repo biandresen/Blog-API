@@ -333,17 +333,19 @@ async function createPost(
   });
 }
 
-async function updatePost(postId, { title, body, published, tags }, { language } = {}) {
+async function updatePost(
+  postId,
+  { title, body, published, tags },
+  { language, requesterId = null, requesterRole = null } = {}
+) {
   const lang = normalizeLanguage(language);
 
-  // Ensure strict partitioning:
-  // Only allow updates for posts in this language.
-  const existing = await prisma.blogPost.findFirst({
-    where: { id: postId, language: lang },
-    select: { id: true },
+  const existing = await prisma.blogPost.findUnique({
+    where: { id: Number(postId) },
+    select: { id: true, language: true },
   });
 
-  if (!existing) return null;
+  if (!existing || existing.language !== lang) return null;
 
   const updateData = {};
   if (title !== undefined) updateData.title = title;
@@ -371,11 +373,15 @@ async function updatePost(postId, { title, body, published, tags }, { language }
   }
 
   await prisma.blogPost.update({
-    where: { id: postId },
+    where: { id: Number(postId) },
     data: updateData,
   });
 
-  return getPostById(postId, { language: lang });
+  return getPostById(postId, {
+    language: lang,
+    requesterId,
+    requesterRole,
+  });
 }
 
 async function deletePost(postId, { language } = {}) {

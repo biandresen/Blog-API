@@ -215,10 +215,14 @@ async function updatePost(req, res, next) {
   }
 
     const updatedPost = await postService.updatePost(
-      postId,
-      { title, body, published, tags: normalizedTags },
-      { language }
-    );
+    postId,
+    { title, body, published, tags: normalizedTags },
+    {
+      language,
+      requesterId: req.user?.id ?? null,
+      requesterRole: req.user?.role ?? null,
+    }
+  );
 
     if (!updatedPost) return next(new CustomError(404, "Post not found for this language"));
 
