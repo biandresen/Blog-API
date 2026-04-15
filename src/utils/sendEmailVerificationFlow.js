@@ -3,7 +3,10 @@ import authService from "../services/authService.js";
 import emailService from "../services/emailService.js";
 
 export default async function sendEmailVerificationFlow(user, req) {
-  const FRONTEND_BASE_URL = process.env.NODE_ENV == "production" ? process.env.FRONTEND_BASE_URL || "https://pundad.app" : "http://localhost:5173";
+  const FRONTEND_BASE_URL =
+    process.env.NODE_ENV == "production" ?
+      process.env.FRONTEND_BASE_URL || "https://pundad.app"
+    : "http://127.0.0.1:5173";
 
   const rawToken = crypto.randomBytes(32).toString("hex");
   const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");

@@ -49,7 +49,7 @@ async function getUserByNameOrEmail(req, res, next) {
     200,
     "User retrieved successfully",
     { ...toClientUser(user), active: user.active },
-    1
+    1,
   );
 }
 
@@ -64,27 +64,27 @@ async function updateUserProfile(req, res, next) {
       username: updateData.username.trim(),
     });
 
-   if (moderation.blocked) {
-    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+    if (moderation.blocked) {
+      const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
 
-    await logService.createModerationEvent({
-      userId: Number(req.user?.id) || null,
-      action: "create_post",
-      blocked: true,
-      fieldNames: ["title", "body", "tags"],
-      matchedTerms,
-      matchedVariants,
-      contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"] || null,
-    });
+      await logService.createModerationEvent({
+        userId: Number(req.user?.id) || null,
+        action: "create_post",
+        blocked: true,
+        fieldNames: ["title", "body", "tags"],
+        matchedTerms,
+        matchedVariants,
+        contentPreview: [title, body].filter(Boolean).join(" | ").slice(0, 160),
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || null,
+      });
 
-    return next(
-      new CustomError(400, "Content contains blocked language", [
-        { field: "content", message: "Contains inappropriate language" },
-      ])
-    );
-  }
+      return next(
+        new CustomError(400, "Content contains blocked language", [
+          { field: "content", message: "Contains inappropriate language" },
+        ]),
+      );
+    }
 
     updateData.username = updateData.username.trim();
   }
@@ -103,13 +103,7 @@ async function updateUserProfile(req, res, next) {
 
   const updated = await userService.updateUser(userId, updateData);
 
-  return successResponse(
-    res,
-    200,
-    "User updated successfully",
-    toClientUser(updated),
-    1
-  );
+  return successResponse(res, 200, "User updated successfully", toClientUser(updated), 1);
 }
 
 async function deleteUser(req, res, next) {
@@ -151,13 +145,13 @@ async function deleteUser(req, res, next) {
   return successResponse(
     res,
     200,
-    "User deleted successfully",
+    "User deactivated successfully",
     {
       ...toClientUser(deletedUser),
       active: deletedUser.active,
       deletedAt: deletedUser.deletedAt,
     },
-    1
+    1,
   );
 }
 
@@ -168,8 +162,9 @@ async function reactivateUser(req, res, next) {
     return next(new CustomError(400, "Invalid user id given"));
   }
 
-  const targetUser = await userService.getUserByIdEvenIfInactive
-    ? await userService.getUserByIdEvenIfInactive(userId)
+  const targetUser =
+    (await userService.getUserByIdEvenIfInactive) ?
+      await userService.getUserByIdEvenIfInactive(userId)
     : await userService.getUserByEmail("__placeholder__"); // replace by proper service method if needed
 
   const updatedUser = await userService.reactivateUser(userId);
@@ -202,7 +197,7 @@ async function reactivateUser(req, res, next) {
       active: updatedUser.active,
       deletedAt: updatedUser.deletedAt,
     },
-    1
+    1,
   );
 }
 

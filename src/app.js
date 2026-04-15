@@ -46,7 +46,7 @@ app.use(requestLogger);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
-  })
+  }),
 );
 
 // --------------------------------------------------
@@ -65,7 +65,7 @@ app.use(
     },
     credentials: true,
     exposedHeaders: ["Retry-After", "x-request-id"],
-  })
+  }),
 );
 
 // --------------------------------------------------
@@ -100,7 +100,7 @@ app.use(
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       }
     },
-  })
+  }),
 );
 
 // --------------------------------------------------
@@ -123,7 +123,7 @@ app.use("/api/v1/comments", routes.commentRouter);
 app.use("/api/v1/tags", routes.tagRouter);
 app.use("/api/v1/badges", routes.badgeRouter);
 app.use("/api/v1/featured", routes.featuredRouter);
-app.use("/api/v1/hall-of-fame", routes.hallOfFameRouter);
+app.use("/api/v1/leaderboard", routes.leaderboardRouter);
 app.use("/api/v1/moderation", routes.moderationRouter);
 
 // --------------------------------------------------

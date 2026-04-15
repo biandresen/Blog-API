@@ -20,7 +20,6 @@ const BASE_USER_SELECT = {
   dailyJokeBestStreak: true,
 };
 
-
 /**
  * Build language-filtered user selection
  * Ensures badges only appear for the active language
@@ -77,10 +76,7 @@ function buildPostInclude(language) {
  * Prevent duplicate tags like "Dad" and "dad", or " dad "
  */
 function normalizeTagName(name) {
-  return name
-    .toString()
-    .trim()
-    .replace(/\s+/g, " ");
+  return name.toString().trim().replace(/\s+/g, " ");
 }
 
 function uniqueNormalizedTags(tags) {
@@ -95,13 +91,7 @@ function uniqueNormalizedTags(tags) {
   return [...set];
 }
 
-async function getAllPosts({
-  language,
-  page = 1,
-  limit = 15,
-  sort = "asc",
-  tag = null,
-} = {}) {
+async function getAllPosts({ language, page = 1, limit = 15, sort = "asc", tag = null } = {}) {
   const lang = normalizeLanguage(language);
 
   const parsedPage = Math.max(1, parseInt(page) || 1);
@@ -126,26 +116,20 @@ async function getAllPosts({
   };
 
   const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy,
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: buildPostInclude(lang),
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
 
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
 
-async function getAllDrafts({
-  language,
-  page = 1,
-  limit = 100,
-  sort = "desc",
-  tag = null,
-} = {}) {
+async function getAllDrafts({ language, page = 1, limit = 100, sort = "desc", tag = null } = {}) {
   const lang = normalizeLanguage(language);
 
   const parsedPage = Math.max(1, parseInt(page) || 1);
@@ -169,7 +153,7 @@ async function getAllDrafts({
     },
     skip,
     take: parsedLimit,
-   include: {
+    include: {
       tags: true,
       user: {
         select: buildIncludedUser(lang),
@@ -180,14 +164,7 @@ async function getAllDrafts({
 
 async function getAllPostsByAuthor(
   authorId,
-  {
-    language,
-    page = 1,
-    limit = 15,
-    sort = "desc",
-    tag = null,
-    published = true,
-  } = {}
+  { language, page = 1, limit = 15, sort = "desc", tag = null, published = true } = {},
 ) {
   const lang = normalizeLanguage(language);
 
@@ -211,24 +188,20 @@ async function getAllPostsByAuthor(
   };
 
   const [items, total] = await Promise.all([
-  prisma.blogPost.findMany({
-    where,
-    orderBy,
-    skip,
-    take: parsedLimit,
-    include: buildPostInclude(lang),
-  }),
-  prisma.blogPost.count({ where }),
-]);
+    prisma.blogPost.findMany({
+      where,
+      orderBy,
+      skip,
+      take: parsedLimit,
+      include: buildPostInclude(lang),
+    }),
+    prisma.blogPost.count({ where }),
+  ]);
 
   return { items, total, page: parsedPage, limit: parsedLimit, language: lang };
 }
 
-
-async function getPostById(
-  postId,
-  { language, requesterId = null, requesterRole = null } = {}
-) {
+async function getPostById(postId, { language, requesterId = null, requesterRole = null } = {}) {
   const lang = normalizeLanguage(language);
 
   const post = await prisma.blogPost.findFirst({
@@ -271,12 +244,12 @@ async function getRandomPost({ language } = {}) {
   const skip = Math.floor(Math.random() * count);
 
   const [post] = await prisma.blogPost.findMany({
-  where: { language: lang, published: true },
-  orderBy: { id: "asc" },
-  skip,
-  take: 1,
-  include: buildPostInclude(lang),
-});
+    where: { language: lang, published: true },
+    orderBy: { id: "asc" },
+    skip,
+    take: 1,
+    include: buildPostInclude(lang),
+  });
 
   return post ?? null;
 }
@@ -307,7 +280,7 @@ async function createPost(
   body = "Body...",
   published = false,
   tags = [],
-  { language } = {}
+  { language } = {},
 ) {
   const lang = normalizeLanguage(language);
   const normalizedTags = uniqueNormalizedTags(tags);
@@ -336,7 +309,7 @@ async function createPost(
 async function updatePost(
   postId,
   { title, body, published, tags },
-  { language, requesterId = null, requesterRole = null } = {}
+  { language, requesterId = null, requesterRole = null } = {},
 ) {
   const lang = normalizeLanguage(language);
 
@@ -442,7 +415,7 @@ async function searchPosts(
     limit = 15,
     sort = "desc",
     filters = { title: true, body: true, comments: true, tags: true },
-  } = {}
+  } = {},
 ) {
   const lang = normalizeLanguage(language);
 
@@ -471,12 +444,7 @@ async function searchPosts(
     tags: !!filters.tags,
   };
 
-  if (
-    !activeFilters.title &&
-    !activeFilters.body &&
-    !activeFilters.comments &&
-    !activeFilters.tags
-  ) {
+  if (!activeFilters.title && !activeFilters.body && !activeFilters.comments && !activeFilters.tags) {
     return {
       items: [],
       total: 0,
@@ -557,24 +525,21 @@ async function getPopularPosts({ language, limit = 10, tag = null } = {}) {
   const parsedLimit = Math.max(1, parseInt(limit) || 10);
 
   return prisma.blogPost.findMany({
-  where: {
-    language: lang,
-    published: true,
-    ...(tag?.length && {
-      tags: {
-        some: {
-          name: { in: tag.map(normalizeTagName) },
+    where: {
+      language: lang,
+      published: true,
+      ...(tag?.length && {
+        tags: {
+          some: {
+            name: { in: tag.map(normalizeTagName) },
+          },
         },
-      },
-    }),
-  },
-  orderBy: [
-    { likes: { _count: "desc" } },
-    { createdAt: "desc" },
-  ],
-  take: parsedLimit,
-  include: buildPostInclude(lang),
-});
+      }),
+    },
+    orderBy: [{ likes: { _count: "desc" } }, { createdAt: "desc" }],
+    take: parsedLimit,
+    include: buildPostInclude(lang),
+  });
 }
 
 export default {

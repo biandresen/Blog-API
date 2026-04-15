@@ -1,10 +1,5 @@
 import prisma from "../config/prismaClient.js";
-import {
-  startOfUtcMonth,
-  addUtcMonths,
-  startOfUtcWeek,
-  addUtcDays,
-} from "../utils/date.js";
+import { startOfUtcMonth, addUtcMonths, startOfUtcWeek, addUtcDays } from "../utils/date.js";
 import { normalizeLanguage } from "../utils/language.js";
 
 const FEATURE_BADGES = [
@@ -51,17 +46,10 @@ function sumWeights(winsByBadge) {
   return score;
 }
 
-export async function getHallOfFameUsers({
-  language,
-  period = "month",
-  limit = 25,
-} = {}) {
+export async function getLeaderboardUsers({ language, period = "month", limit = 25 } = {}) {
   const lang = normalizeLanguage(language);
 
-  const safePeriod =
-    period === "week" || period === "month" || period === "all"
-      ? period
-      : "month";
+  const safePeriod = period === "week" || period === "month" || period === "all" ? period : "month";
 
   const parsedLimit = Math.min(100, Math.max(1, Number(limit) || 25));
 
@@ -106,8 +94,9 @@ export async function getHallOfFameUsers({
 
   const likePostIds = likeRows.map((row) => row.postId);
 
-  const likePosts = likePostIds.length
-    ? await prisma.blogPost.findMany({
+  const likePosts =
+    likePostIds.length ?
+      await prisma.blogPost.findMany({
         where: {
           id: { in: likePostIds },
           language: lang,
@@ -144,8 +133,9 @@ export async function getHallOfFameUsers({
 
   const commentPostIds = commentRows.map((row) => row.postId);
 
-  const commentPosts = commentPostIds.length
-    ? await prisma.blogPost.findMany({
+  const commentPosts =
+    commentPostIds.length ?
+      await prisma.blogPost.findMany({
         where: {
           id: { in: commentPostIds },
           language: lang,
@@ -157,9 +147,7 @@ export async function getHallOfFameUsers({
       })
     : [];
 
-  const commentPostIdToAuthor = new Map(
-    commentPosts.map((post) => [post.id, post.authorId])
-  );
+  const commentPostIdToAuthor = new Map(commentPosts.map((post) => [post.id, post.authorId]));
 
   const commentsByUser = new Map();
 
@@ -167,20 +155,13 @@ export async function getHallOfFameUsers({
     const authorId = commentPostIdToAuthor.get(row.postId);
     if (!authorId) continue;
 
-    commentsByUser.set(
-      authorId,
-      (commentsByUser.get(authorId) ?? 0) + row._count._all
-    );
+    commentsByUser.set(authorId, (commentsByUser.get(authorId) ?? 0) + row._count._all);
   }
 
   /**
    * Union of users appearing in this language slice.
    */
-  const userIds = new Set([
-    ...winsByUser.keys(),
-    ...likesByUser.keys(),
-    ...commentsByUser.keys(),
-  ]);
+  const userIds = new Set([...winsByUser.keys(), ...likesByUser.keys(), ...commentsByUser.keys()]);
 
   if (userIds.size === 0) return [];
 
@@ -201,10 +182,7 @@ export async function getHallOfFameUsers({
 
   const rows = users.map((user) => {
     const winsByBadge = winsByUser.get(user.id) ?? {};
-    const winsTotal = Object.values(winsByBadge).reduce(
-      (sum, count) => sum + (count ?? 0),
-      0
-    );
+    const winsTotal = Object.values(winsByBadge).reduce((sum, count) => sum + (count ?? 0), 0);
 
     const featuredScore = sumWeights(winsByBadge);
 
@@ -243,4 +221,4 @@ export async function getHallOfFameUsers({
   return rows.slice(0, parsedLimit);
 }
 
-export default { getHallOfFameUsers };
+export default { getLeaderboardUsers };
