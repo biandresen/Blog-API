@@ -34,42 +34,37 @@ async function registerUser(req, res, next) {
     username: username?.trim(),
   });
 
-if (moderation.blocked) {
-  const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
+  if (moderation.blocked) {
+    const { matchedTerms, matchedVariants } = getModerationLogData(moderation);
 
-  await logService.createModerationEvent({
-    userId: Number(req.user?.id) || null,
-    action: "register_username",
-    blocked: true,
-    fieldNames: ["username"],
-    matchedTerms,
-    matchedVariants,
-    contentPreview: username?.trim()?.slice(0, 160) || null,
-    ipAddress: req.ip,
-    userAgent: req.headers["user-agent"] || null,
-  });
+    await logService.createModerationEvent({
+      userId: Number(req.user?.id) || null,
+      action: "register_username",
+      blocked: true,
+      fieldNames: ["username"],
+      matchedTerms,
+      matchedVariants,
+      contentPreview: username?.trim()?.slice(0, 160) || null,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || null,
+    });
 
-  return next(
-    new CustomError(400, "Username contains blocked language", [
-      { field: "username", message: "Contains inappropriate language" },
-    ])
-  );
-}
+    return next(
+      new CustomError(400, "Username contains blocked language", [
+        { field: "username", message: "Contains inappropriate language" },
+      ]),
+    );
+  }
 
   const normalizedUsername = username.trim();
   const normalizedEmail = email.trim().toLowerCase();
   const hashedPassword = await hashPassword(password);
 
-  const newUser = await userService.createUser(
-    normalizedUsername,
-    normalizedEmail,
-    hashedPassword,
-    {
-      termsAcceptedAt: new Date(),
-      termsVersion: LEGAL_VERSIONS.TERMS,
-      emailVerified: false,
-    }
-  );
+  const newUser = await userService.createUser(normalizedUsername, normalizedEmail, hashedPassword, {
+    termsAcceptedAt: new Date(),
+    termsVersion: LEGAL_VERSIONS.TERMS,
+    emailVerified: false,
+  });
 
   await sendEmailVerificationFlow(newUser, req);
 
@@ -113,8 +108,8 @@ async function loginUser(req, res, next) {
         403,
         "Account is not verified through email yet",
         [{ field: "email", message: "Email not verified" }],
-        "EMAIL_NOT_VERIFIED"
-      )
+        "EMAIL_NOT_VERIFIED",
+      ),
     );
   }
 
@@ -180,7 +175,9 @@ async function refreshAccessToken(req, res, next) {
   if (!user) return next(new CustomError(404, "User not found"));
   if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
   if (!user.emailVerified) {
-    return next(new CustomError(403, "Account is not verified through email yet", null, "EMAIL_NOT_VERIFIED"));
+    return next(
+      new CustomError(403, "Account is not verified through email yet", null, "EMAIL_NOT_VERIFIED"),
+    );
   }
 
   const { accessToken, refreshToken } = createTokens(user);
@@ -258,7 +255,9 @@ async function verifyEmail(req, res, next) {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const record = await authService.getRecordFromEmailVerificationToken(hashedToken);
-  if (!record) return next(new CustomError(400, "Invalid or expired token", null, "INVALID_VERIFICATION_TOKEN"));
+  if (!record) {
+    return next(new CustomError(400, "Invalid or expired token", null, "INVALID_VERIFICATION_TOKEN"));
+  }
 
   if (record.expiresAt < new Date()) {
     return next(new CustomError(400, "Token expired", null, "EXPIRED_VERIFICATION_TOKEN"));
@@ -267,9 +266,21 @@ async function verifyEmail(req, res, next) {
   const user = await userService.getUserById(record.userId);
   if (!user) return next(new CustomError(404, "User not found"));
 
-  if (!user.active) return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+  if (!user.active) {
+    return next(new CustomError(403, "User is inactive", null, "USER_INACTIVE"));
+  }
 
-  if (!user.emailVerified) {
+  const isPendingEmailChange = typeof user.pendingEmail === "string" && user.pendingEmail.trim().length > 0;
+
+  if (isPendingEmailChange) {
+    await userService.updateUser(user.id, {
+      email: user.pendingEmail.trim().toLowerCase(),
+      pendingEmail: null,
+      pendingEmailRequestedAt: null,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    });
+  } else if (!user.emailVerified) {
     await userService.updateUser(user.id, {
       emailVerified: true,
       emailVerifiedAt: new Date(),
@@ -284,12 +295,18 @@ async function verifyEmail(req, res, next) {
     type: "EMAIL_VERIFIED",
     path: req.originalUrl,
     language: user.preferredLanguage,
-    metadata: null,
+    metadata: {
+      verifiedPendingEmailChange: isPendingEmailChange,
+    },
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"] || null,
   });
 
-  return successResponse(res, 200, "Email verified successfully");
+  return successResponse(
+    res,
+    200,
+    isPendingEmailChange ? "Email change verified successfully" : "Email verified successfully",
+  );
 }
 
 async function resendVerificationEmail(req, res, next) {

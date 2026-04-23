@@ -12,16 +12,11 @@ import checkValidation from "../middleware/checkValidation.js";
 import avatarUpload from "../middleware/avatarUpload.js";
 import { profileLimiter, readHeavyLimiter, uploadLimiter } from "../middleware/rateLimiters.js";
 
-
 const router = Router();
 
 router.get("/me", isAuthenticated, asyncErrorHandler(userController.getMe));
 router.get("/:id", isAuthenticated, asyncErrorHandler(userController.getUserProfile));
-router.get(
-  "/input/:userInput",
-  isAuthenticated,
-  asyncErrorHandler(userController.getUserByNameOrEmail)
-);
+router.get("/input/:userInput", isAuthenticated, asyncErrorHandler(userController.getUserByNameOrEmail));
 
 router.patch(
   "/:id",
@@ -31,7 +26,7 @@ router.patch(
   ...avatarUpload,
   updateUserValidator,
   checkValidation,
-  asyncErrorHandler(userController.updateUserProfile)
+  asyncErrorHandler(userController.updateUserProfile),
 );
 
 router.patch(
@@ -41,19 +36,38 @@ router.patch(
   isAdmin,
   changeRoleValidator,
   checkValidation,
-  asyncErrorHandler(userController.changeUserRole)
+  asyncErrorHandler(userController.changeUserRole),
 );
 
-router.patch("/:id/reactivate", profileLimiter, isAuthenticated, isAdmin, asyncErrorHandler(userController.reactivateUser));
+router.patch(
+  "/:id/reactivate",
+  profileLimiter,
+  isAuthenticated,
+  isAdmin,
+  asyncErrorHandler(userController.reactivateUser),
+);
 
-router.delete("/:id", profileLimiter, isAuthenticated, isSelfOrAdmin, asyncErrorHandler(userController.deleteUser));
+router.delete(
+  "/:id",
+  profileLimiter,
+  isAuthenticated,
+  isSelfOrAdmin,
+  asyncErrorHandler(userController.deleteUser),
+);
 
 router.get(
   "/:id/posts",
   readHeavyLimiter,
   queryParametersValidator,
   checkValidation,
-  asyncErrorHandler(postController.getAllPostsFromUser)
+  asyncErrorHandler(postController.getAllPostsFromUser),
+);
+
+router.post(
+  "/resend-email-change-verification",
+  profileLimiter,
+  isAuthenticated,
+  asyncErrorHandler(userController.resendEmailChangeVerification),
 );
 
 export default router;

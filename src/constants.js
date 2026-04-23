@@ -3,19 +3,20 @@ export const ROLES = {
   ADMIN_ROLE: "ADMIN",
 };
 
-export const CORS_ORIGINS = [
-  "https://pundad.app",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-];
+export const FRONTEND_BASE_URL =
+  process.env.NODE_ENV == "production" ?
+    process.env.FRONTEND_BASE_URL || "https://pundad.app"
+  : "http://127.0.0.1:5173";
+
+export const CORS_ORIGINS = ["https://pundad.app", "http://localhost:5173", "http://127.0.0.1:5173"];
 
 export const MAX_CHARS = {
   TITLE: 64,
   BODY: 10000,
   TAGS: 200,
   COMMENT: 3000,
-  SEARCH: 100
-}
+  SEARCH: 100,
+};
 
 export const LEGAL_VERSIONS = {
   TERMS: "1.0",

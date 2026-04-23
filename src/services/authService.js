@@ -136,6 +136,25 @@ async function deleteAllEmailVerificationTokensForUser(userId) {
   });
 }
 
+async function deleteAllRefreshTokensForUser(userId) {
+  return prisma.refreshToken.deleteMany({
+    where: { userId },
+  });
+}
+
+async function createEmailVerificationToken(userId, tokenData) {
+  return prisma.emailVerificationToken.create({
+    data: {
+      userId,
+      token: tokenData.token,
+      issuedAt: tokenData.issuedAt,
+      expiresAt: tokenData.expiresAt,
+      ipAddress: tokenData.ipAddress ?? null,
+      userAgent: tokenData.userAgent ?? null,
+    },
+  });
+}
+
 export default {
   storeRefreshToken,
   deleteRefreshToken,
@@ -147,4 +166,6 @@ export default {
   getRecordFromEmailVerificationToken,
   deleteEmailVerificationToken,
   deleteAllEmailVerificationTokensForUser,
+  deleteAllRefreshTokensForUser,
+  createEmailVerificationToken,
 };

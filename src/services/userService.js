@@ -55,6 +55,10 @@ async function updateUser(userId, updateData = {}) {
 
   if (updateData.username !== undefined) fieldsToUpdate.username = updateData.username;
   if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
+  if (updateData.pendingEmail !== undefined) fieldsToUpdate.pendingEmail = updateData.pendingEmail;
+  if (updateData.pendingEmailRequestedAt !== undefined) {
+    fieldsToUpdate.pendingEmailRequestedAt = updateData.pendingEmailRequestedAt;
+  }
   if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
   if (updateData.avatar !== undefined) fieldsToUpdate.avatar = updateData.avatar;
 
@@ -79,8 +83,10 @@ async function updateUser(userId, updateData = {}) {
   }
 
   if (updateData.dailyJokeStreak !== undefined) fieldsToUpdate.dailyJokeStreak = updateData.dailyJokeStreak;
-  if (updateData.dailyJokeBestStreak !== undefined) fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
-  if (updateData.dailyJokeLastViewedAt !== undefined) fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
+  if (updateData.dailyJokeBestStreak !== undefined)
+    fieldsToUpdate.dailyJokeBestStreak = updateData.dailyJokeBestStreak;
+  if (updateData.dailyJokeLastViewedAt !== undefined)
+    fieldsToUpdate.dailyJokeLastViewedAt = updateData.dailyJokeLastViewedAt;
 
   return prisma.user.update({
     where: { id: userId },
@@ -115,6 +121,33 @@ async function reactivateUser(userId) {
   });
 }
 
+async function getUserByIdWithPassword(userId) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+  });
+}
+
+async function getUserByPendingEmail(email) {
+  return prisma.user.findFirst({
+    where: {
+      pendingEmail: { equals: email, mode: "insensitive" },
+    },
+  });
+}
+
+async function findUserByEmailOrPendingEmailExcludingId(email, excludedUserId) {
+  return prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: { equals: email, mode: "insensitive" } },
+        { pendingEmail: { equals: email, mode: "insensitive" } },
+      ],
+      NOT: { id: excludedUserId },
+    },
+    select: { id: true },
+  });
+}
+
 export default {
   getUserById,
   getUserByIdIncludingInactive,
@@ -125,4 +158,7 @@ export default {
   changeRole,
   deleteUser,
   reactivateUser,
+  getUserByIdWithPassword,
+  getUserByPendingEmail,
+  findUserByEmailOrPendingEmailExcludingId,
 };
